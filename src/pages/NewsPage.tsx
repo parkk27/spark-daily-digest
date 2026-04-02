@@ -1,0 +1,62 @@
+import { ExternalLink } from "lucide-react";
+import { articles } from "@/data/mockData";
+import { format, parseISO } from "date-fns";
+import SourceBadge from "@/components/SourceBadge";
+
+const NewsPage = () => {
+  const grouped = articles.reduce<Record<string, typeof articles>>((acc, article) => {
+    (acc[article.date] ??= []).push(article);
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  return (
+    <div className="container max-w-4xl py-8">
+      <h1 className="mb-8 text-2xl font-bold tracking-tight text-foreground opacity-0 animate-fade-in">
+        News Feed
+      </h1>
+
+      <div className="space-y-8">
+        {sortedDates.map((date, di) => (
+          <section key={date} className="opacity-0 animate-fade-in" style={{ animationDelay: `${di * 100}ms` }}>
+            <h2 className="mb-4 text-sm font-medium text-muted-foreground">
+              {format(parseISO(date), "EEEE, MMMM d, yyyy")}
+            </h2>
+            <div className="space-y-3">
+              {grouped[date].map((article, i) => (
+                <a
+                  key={i}
+                  href={article.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-4 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-secondary/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <SourceBadge source={article.source} />
+                      {article.tags.map((tag) => (
+                        <span key={tag} className="text-xs text-muted-foreground">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                    <h3 className="mb-1 text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {article.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-secondary-foreground line-clamp-2">
+                      {article.summary}
+                    </p>
+                  </div>
+                  <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                </a>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default NewsPage;
