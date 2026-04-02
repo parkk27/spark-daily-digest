@@ -1,6 +1,8 @@
-import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
+import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash, Mail, Send, CheckCircle, AlertCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useState } from "react";
 import { useSparkData } from "@/hooks/useSparkData";
+import { supabase } from "@/integrations/supabase/client";
 
 const SectionCard = ({
   icon: Icon,
@@ -34,11 +36,27 @@ const SectionCard = ({
 
 const HomePage = () => {
   const { data, isLoading, isFetching, refetch } = useSparkData();
+  const [emailStatus, setEmailStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const trends = data?.trends ?? [];
   const topTrends = trends.filter((t) => t.status === "growing" || t.status === "new").slice(0, 4);
   const { summary, date } = data?.dailySummary ?? {
     summary: { highlights: [], trends: [], impact: [], topInsight: "" },
     date: new Date().toISOString().split("T")[0],
+  };
+
+  const handleSendTestEmail = async () => {
+    setEmailStatus("loading");
+    try {
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: { email: "test@example.com" },
+      });
+      if (error) throw error;
+      setEmailStatus("success");
+      setTimeout(() => setEmailStatus("idle"), 4000);
+    } catch {
+      setEmailStatus("error");
+      setTimeout(() => setEmailStatus("idle"), 4000);
+    }
   };
 
   return (
@@ -60,6 +78,54 @@ const HomePage = () => {
         >
           <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
         </button>
+      </div>
+
+      {/* Daily Email Brief Section */}
+      <div
+        className="mb-6 rounded-lg border border-border bg-card p-4 opacity-0 animate-fade-in"
+        style={{ animationDelay: "50ms" }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Mail className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Daily Email Brief</h3>
+              <p className="text-xs text-muted-foreground">
+                Receive a daily Spark Intelligence summary at 9 AM IST
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleSendTestEmail}
+            disabled={emailStatus === "loading"}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {emailStatus === "loading" ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                Sending…
+              </>
+            ) : emailStatus === "success" ? (
+              <>
+                <CheckCircle className="h-3.5 w-3.5" />
+                Sent!
+              </>
+            ) : emailStatus === "error" ? (
+              <>
+                <AlertCircle className="h-3.5 w-3.5" />
+                Failed
+              </>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                Send Test Email
+              </>
+            )}
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground/70">
+          Daily emails are automatically sent at 9 AM IST · Customization and subscriptions coming soon
+        </p>
       </div>
 
       {isLoading ? (
