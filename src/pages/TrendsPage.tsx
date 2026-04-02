@@ -31,8 +31,11 @@ const TrendsPage = () => {
               <div className="flex items-center gap-2.5">
                 <Hash className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">{trend.topic}</span>
+                {trend.count !== undefined && (
+                  <span className="text-xs text-muted-foreground">({trend.count} mentions)</span>
+                )}
               </div>
-              <StatusBadge status={trend.status} />
+              <StatusBadge status={trend.status} change={trend.change} />
             </div>
           ))}
         </div>
