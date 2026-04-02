@@ -1,6 +1,8 @@
-import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
+import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash, Mail, Send, CheckCircle, AlertCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useState } from "react";
 import { useSparkData } from "@/hooks/useSparkData";
+import { supabase } from "@/integrations/supabase/client";
 
 const SectionCard = ({
   icon: Icon,
