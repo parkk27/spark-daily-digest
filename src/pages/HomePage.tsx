@@ -85,6 +85,34 @@ const HomePage = () => {
           )}
 
           <SectionCard icon={Lightbulb} title="Key Highlights" items={summary.highlights} delay={100} />
+
+          {/* Top Trends Today */}
+          {topTrends.length > 0 && (
+            <div
+              className="rounded-lg border border-border bg-card p-6 opacity-0 animate-fade-in"
+              style={{ animationDelay: "150ms" }}
+            >
+              <div className="mb-4 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Top Trends Today</h2>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {topTrends.map((t) => (
+                  <div
+                    key={t.topic}
+                    className="flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-3 py-1.5"
+                  >
+                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">{t.topic}</span>
+                    <span className={`text-xs font-medium ${t.status === "new" ? "text-status-new" : "text-status-growing"}`}>
+                      {t.status === "new" ? "NEW" : `↑${t.change}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <SectionCard icon={TrendingUp} title="Emerging Trends" items={summary.trends} delay={200} />
           <SectionCard icon={Sparkles} title="Why It Matters" items={summary.impact} delay={300} />
         </div>
