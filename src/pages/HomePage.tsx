@@ -34,6 +34,8 @@ const SectionCard = ({
 
 const HomePage = () => {
   const { data, isLoading, isFetching, refetch } = useSparkData();
+  const trends = data?.trends ?? [];
+  const topTrends = trends.filter((t) => t.status === "growing" || t.status === "new").slice(0, 4);
   const { summary, date } = data?.dailySummary ?? {
     summary: { highlights: [], trends: [], impact: [], topInsight: "" },
     date: new Date().toISOString().split("T")[0],
