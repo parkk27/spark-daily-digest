@@ -1,4 +1,4 @@
-import { Lightbulb, TrendingUp, Sparkles, RefreshCw } from "lucide-react";
+import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useSparkData } from "@/hooks/useSparkData";
 
@@ -34,7 +34,10 @@ const SectionCard = ({
 
 const HomePage = () => {
   const { data, isLoading, isFetching, refetch } = useSparkData();
-  const { summary, date } = data?.dailySummary ?? { summary: { highlights: [], trends: [], impact: [] }, date: new Date().toISOString().split("T")[0] };
+  const { summary, date } = data?.dailySummary ?? {
+    summary: { highlights: [], trends: [], impact: [], topInsight: "" },
+    date: new Date().toISOString().split("T")[0],
+  };
 
   return (
     <div className="container max-w-4xl py-8">
@@ -59,12 +62,26 @@ const HomePage = () => {
 
       {isLoading ? (
         <div className="space-y-6">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-40 animate-pulse rounded-lg bg-card" />
           ))}
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Top Insight of the Day */}
+          {summary.topInsight && (
+            <div
+              className="rounded-lg border border-primary/30 bg-primary/5 p-6 opacity-0 animate-fade-in"
+              style={{ animationDelay: "50ms" }}
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Top Insight</h2>
+              </div>
+              <p className="text-sm leading-relaxed text-foreground/90">{summary.topInsight}</p>
+            </div>
+          )}
+
           <SectionCard icon={Lightbulb} title="Key Highlights" items={summary.highlights} delay={100} />
           <SectionCard icon={TrendingUp} title="Emerging Trends" items={summary.trends} delay={200} />
           <SectionCard icon={Sparkles} title="Why It Matters" items={summary.impact} delay={300} />
