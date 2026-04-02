@@ -80,6 +80,54 @@ const HomePage = () => {
         </button>
       </div>
 
+      {/* Daily Email Brief Section */}
+      <div
+        className="mb-6 rounded-lg border border-border bg-card p-4 opacity-0 animate-fade-in"
+        style={{ animationDelay: "50ms" }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Mail className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Daily Email Brief</h3>
+              <p className="text-xs text-muted-foreground">
+                Receive a daily Spark Intelligence summary at 9 AM IST
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleSendTestEmail}
+            disabled={emailStatus === "loading"}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {emailStatus === "loading" ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                Sending…
+              </>
+            ) : emailStatus === "success" ? (
+              <>
+                <CheckCircle className="h-3.5 w-3.5" />
+                Sent!
+              </>
+            ) : emailStatus === "error" ? (
+              <>
+                <AlertCircle className="h-3.5 w-3.5" />
+                Failed
+              </>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                Send Test Email
+              </>
+            )}
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground/70">
+          Daily emails are automatically sent at 9 AM IST · Customization and subscriptions coming soon
+        </p>
+      </div>
+
       {isLoading ? (
         <div className="space-y-6">
           {[1, 2, 3, 4].map((i) => (
