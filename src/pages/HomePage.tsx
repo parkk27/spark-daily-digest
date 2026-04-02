@@ -1,6 +1,6 @@
-import { Lightbulb, TrendingUp, Sparkles } from "lucide-react";
-import { dailySummary } from "@/data/mockData";
+import { Lightbulb, TrendingUp, Sparkles, RefreshCw } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useSparkData } from "@/hooks/useSparkData";
 
 const SectionCard = ({
   icon: Icon,
@@ -33,24 +33,43 @@ const SectionCard = ({
 );
 
 const HomePage = () => {
-  const { summary, date } = dailySummary;
+  const { data, isLoading, isFetching, refetch } = useSparkData();
+  const { summary, date } = data?.dailySummary ?? { summary: { highlights: [], trends: [], impact: [] }, date: new Date().toISOString().split("T")[0] };
 
   return (
     <div className="container max-w-4xl py-8">
-      <div className="mb-8 opacity-0 animate-fade-in">
-        <p className="text-sm text-muted-foreground">
-          {format(parseISO(date), "EEEE, MMMM d, yyyy")}
-        </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-          Today's Spark Brief
-        </h1>
+      <div className="mb-8 flex items-start justify-between opacity-0 animate-fade-in">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {format(parseISO(date), "EEEE, MMMM d, yyyy")}
+          </p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+            Today's Spark Brief
+          </h1>
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="mt-1 rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+          title="Refresh data"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
-      <div className="space-y-6">
-        <SectionCard icon={Lightbulb} title="Key Highlights" items={summary.highlights} delay={100} />
-        <SectionCard icon={TrendingUp} title="Emerging Trends" items={summary.trends} delay={200} />
-        <SectionCard icon={Sparkles} title="Why It Matters" items={summary.impact} delay={300} />
-      </div>
+      {isLoading ? (
+        <div className="space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-40 animate-pulse rounded-lg bg-card" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <SectionCard icon={Lightbulb} title="Key Highlights" items={summary.highlights} delay={100} />
+          <SectionCard icon={TrendingUp} title="Emerging Trends" items={summary.trends} delay={200} />
+          <SectionCard icon={Sparkles} title="Why It Matters" items={summary.impact} delay={300} />
+        </div>
+      )}
     </div>
   );
 };
