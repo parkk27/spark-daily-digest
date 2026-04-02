@@ -326,7 +326,7 @@ Rules:
 function deriveTrends(
   articles: ScrapedArticle[],
   previousTagCounts?: Record<string, number>
-): { topic: string; status: string; count: number; change: number }[] {
+): { topic: string; status: string; today: number; yesterday: number; change: number }[] {
   const tagCount: Record<string, number> = {};
   for (const a of articles) {
     for (const t of a.tags) {
@@ -334,26 +334,36 @@ function deriveTrends(
     }
   }
 
-  return Object.entries(tagCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-    .map(([topic, count]) => {
-      const prev = previousTagCounts?.[topic] ?? 0;
-      const change = count - prev;
+  // Merge all topics from today and yesterday
+  const allTopics = new Set([
+    ...Object.keys(tagCount),
+    ...(previousTagCounts ? Object.keys(previousTagCounts) : []),
+  ]);
+
+  return [...allTopics]
+    .map((topic) => {
+      const today = tagCount[topic] || 0;
+      const yesterday = previousTagCounts?.[topic] ?? 0;
+      const change = today - yesterday;
       let status: string;
       if (!previousTagCounts) {
-        status = count >= 3 ? 'growing' : count >= 2 ? 'stable' : 'new';
-      } else if (prev === 0) {
+        status = today >= 3 ? 'growing' : today >= 2 ? 'stable' : 'new';
+      } else if (yesterday === 0 && today > 0) {
         status = 'new';
+      } else if (today === 0 && yesterday > 0) {
+        status = 'declining';
       } else if (change >= 2) {
         status = 'growing';
-      } else if (change <= -1) {
+      } else if (change <= -2) {
         status = 'declining';
       } else {
         status = 'stable';
       }
-      return { topic, status, count, change };
-    });
+      return { topic, status, today, yesterday, change };
+    })
+    .filter((t) => t.today > 0 || t.yesterday > 0)
+    .sort((a, b) => b.today - a.today)
+    .slice(0, 10);
 }
 
 // ── Fallback Summary (no AI) ──

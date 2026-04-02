@@ -64,10 +64,11 @@ const mockResponse = {
     },
   ],
   trends: [
-    { topic: "iceberg", status: "growing", count: 4, change: 2 },
-    { topic: "spark4", status: "new", count: 2, change: 2 },
-    { topic: "ai", status: "stable", count: 3, change: 0 },
-    { topic: "performance", status: "growing", count: 3, change: 1 },
+    { topic: "iceberg", status: "growing", today: 5, yesterday: 2, change: 3 },
+    { topic: "spark4", status: "new", today: 2, yesterday: 0, change: 2 },
+    { topic: "ai", status: "stable", today: 3, yesterday: 3, change: 0 },
+    { topic: "performance", status: "growing", today: 3, yesterday: 1, change: 2 },
+    { topic: "streaming", status: "declining", today: 1, yesterday: 3, change: -2 },
   ],
 };
 
