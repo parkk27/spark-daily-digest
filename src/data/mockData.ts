@@ -10,8 +10,9 @@ export interface Article {
 export interface TrendItem {
   topic: string;
   status: string;
-  count?: number;
-  change?: number;
+  today: number;
+  yesterday: number;
+  change: number;
 }
 
 export interface DailySummary {
