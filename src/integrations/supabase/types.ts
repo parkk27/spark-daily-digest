@@ -14,7 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      spark_daily_snapshots: {
+        Row: {
+          article_count: number
+          created_at: string
+          date: string
+          id: string
+          summary: Json
+          tag_counts: Json
+        }
+        Insert: {
+          article_count?: number
+          created_at?: string
+          date: string
+          id?: string
+          summary?: Json
+          tag_counts?: Json
+        }
+        Update: {
+          article_count?: number
+          created_at?: string
+          date?: string
+          id?: string
+          summary?: Json
+          tag_counts?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
