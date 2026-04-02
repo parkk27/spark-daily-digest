@@ -36,11 +36,27 @@ const SectionCard = ({
 
 const HomePage = () => {
   const { data, isLoading, isFetching, refetch } = useSparkData();
+  const [emailStatus, setEmailStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const trends = data?.trends ?? [];
   const topTrends = trends.filter((t) => t.status === "growing" || t.status === "new").slice(0, 4);
   const { summary, date } = data?.dailySummary ?? {
     summary: { highlights: [], trends: [], impact: [], topInsight: "" },
     date: new Date().toISOString().split("T")[0],
+  };
+
+  const handleSendTestEmail = async () => {
+    setEmailStatus("loading");
+    try {
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: { email: "test@example.com" },
+      });
+      if (error) throw error;
+      setEmailStatus("success");
+      setTimeout(() => setEmailStatus("idle"), 4000);
+    } catch {
+      setEmailStatus("error");
+      setTimeout(() => setEmailStatus("idle"), 4000);
+    }
   };
 
   return (
