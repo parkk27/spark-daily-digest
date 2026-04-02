@@ -1,4 +1,4 @@
-import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap } from "lucide-react";
+import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useSparkData } from "@/hooks/useSparkData";
 
