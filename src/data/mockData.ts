@@ -10,11 +10,14 @@ export interface Article {
 export interface TrendItem {
   topic: string;
   status: string;
+  count?: number;
+  change?: number;
 }
 
 export interface DailySummary {
   date: string;
   summary: {
+    topInsight?: string;
     highlights: string[];
     trends: string[];
     impact: string[];
@@ -24,6 +27,7 @@ export interface DailySummary {
 const mockResponse = {
   date: "2026-04-02",
   summary: {
+    topInsight: "Spark 4.2.0-preview3 release signals the ecosystem is accelerating toward next-gen features",
     highlights: [
       "Databricks announced Spark runtime improvements",
       "Iceberg adoption increasing across cloud vendors",
@@ -59,8 +63,10 @@ const mockResponse = {
     },
   ],
   trends: [
-    { topic: "iceberg", status: "growing" },
-    { topic: "spark4", status: "new" },
+    { topic: "iceberg", status: "growing", count: 4, change: 2 },
+    { topic: "spark4", status: "new", count: 2, change: 2 },
+    { topic: "ai", status: "stable", count: 3, change: 0 },
+    { topic: "performance", status: "growing", count: 3, change: 1 },
   ],
 };
 

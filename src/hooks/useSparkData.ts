@@ -36,7 +36,7 @@ export function useSparkData() {
   return useQuery<SparkData>({
     queryKey: ["spark-data"],
     queryFn: fetchSparkData,
-    staleTime: 1000 * 60 * 30, // 30 min
+    staleTime: 1000 * 60 * 30,
     retry: 1,
     placeholderData: {
       dailySummary: mockSummary,
