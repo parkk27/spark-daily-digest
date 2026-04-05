@@ -6,7 +6,8 @@ const corsHeaders = {
 // ── Source Configuration with Weights ──
 const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
-  { name: 'apache', url: 'https://spark.apache.org/news/', weight: 1.0 },
+  { name: 'apache', url: 'https://spark.apache.org/releases/', weight: 1.0 },
+  { name: 'apache-community', url: 'https://news.apache.org/', weight: 0.8 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
   { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/', weight: 0.9 },
 ];
