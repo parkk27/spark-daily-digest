@@ -83,6 +83,13 @@ const NOISE_PATTERNS = [
   /sidebar/i,
   /advertisement/i,
   /sponsored/i,
+  /\bdf\b.*=.*spark\./i,
+  /\.show\(\)/i,
+  /\.filter\(/i,
+  /\.select\(/i,
+  /import \w+/i,
+  /def \w+\(/i,
+  /val \w+ =/i,
 ];
 
 const LOW_SIGNAL_PATTERNS = [
