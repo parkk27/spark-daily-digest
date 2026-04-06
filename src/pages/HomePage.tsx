@@ -67,7 +67,7 @@ const HomePage = () => {
             {format(parseISO(date), "EEEE, MMMM d, yyyy")}
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            Today's Spark Brief
+            Today's Big Data Brief
           </h1>
         </div>
         <button
