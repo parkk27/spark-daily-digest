@@ -50,6 +50,15 @@ const TOPIC_TAGS: Record<string, string> = {
   'azure synapse': 'azure',
   'bigquery': 'gcp',
   'dataproc': 'gcp',
+  'emr serverless': 'serverless',
+  'emr on eks': 'kubernetes',
+  'amazon emr': 'emr',
+  'emr studio': 'emr',
+  'aws glue': 'glue',
+  'glue etl': 'glue',
+  'lake formation': 'governance',
+  'kinesis': 'streaming',
+  'kafka': 'streaming',
 };
 
 function extractTags(text: string): string[] {
