@@ -256,6 +256,9 @@ function extractArticlesFromMarkdown(
     // Filter noise
     if (isNoise(title, summary)) continue;
 
+    // AWS-specific: only keep Spark/EMR relevant articles
+    if (sourceName === 'aws' && !isRelevantForAws(title, summary)) continue;
+
     const tags = extractTags(`${title} ${summary}`);
     const signalScore = computeSignalScore(title, summary, sourceWeight);
 
