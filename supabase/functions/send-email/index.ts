@@ -62,7 +62,7 @@ function buildEmailHtml(date: string, summary: Record<string, any>): string {
   </div>` : ''}
 
   <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #222;">
-    <p style="font-size:11px;color:#666;">Spark Intelligence Hub • Daily Brief</p>
+    <p style="font-size:11px;color:#666;">Big Data Intelligence Hub • Daily Brief</p>
   </div>
 </div>
 </body>

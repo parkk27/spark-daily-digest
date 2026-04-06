@@ -14,7 +14,7 @@ const Navbar = () => {
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-primary" />
           <span className="font-semibold tracking-tight text-foreground">
-            Spark Intelligence Hub
+            Big Data Intelligence Hub
           </span>
         </div>
         <nav className="flex items-center gap-1">
