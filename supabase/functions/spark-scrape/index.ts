@@ -61,6 +61,33 @@ function extractTags(text: string): string[] {
   return found.size > 0 ? [...found] : ['spark'];
 }
 
+// ── AWS Spark/EMR Relevance Filter ──
+const AWS_RELEVANCE_KEYWORDS = [
+  'apache spark', 'spark', 'amazon emr', 'emr serverless', 'emr on eks',
+  'emr studio', 'pyspark', 'iceberg', 'hudi', 'delta lake',
+  'spark sql', 'spark streaming', 'glue etl', 'aws glue',
+  'lake formation', 'data lake', 'lakehouse',
+];
+
+const AWS_EXCLUDE_PATTERNS = [
+  /get started with/i,
+  /introduction to/i,
+  /what is amazon/i,
+  /beginner/i,
+  /^\s*tutorial:/i,
+];
+
+function isRelevantForAws(title: string, summary: string): boolean {
+  const combined = `${title} ${summary}`.toLowerCase();
+  // Must mention at least one Spark/EMR keyword
+  const hasRelevantKeyword = AWS_RELEVANCE_KEYWORDS.some((kw) => combined.includes(kw));
+  if (!hasRelevantKeyword) return false;
+  // Exclude tutorials/intro guides
+  const fullText = `${title} ${summary}`;
+  if (AWS_EXCLUDE_PATTERNS.some((p) => p.test(fullText))) return false;
+  return true;
+}
+
 // ── Signal Filtering ──
 const NOISE_PATTERNS = [
   /skip to (main )?content/i,
