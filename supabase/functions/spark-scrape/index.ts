@@ -3,7 +3,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// ── Source Configuration with Weights ──
+// ── Observability Metrics ──
+interface PipelineMetrics {
+  articles_fetched: number;
+  articles_after_filter: number;
+  duplicates_removed: number;
+  summary_generated: boolean;
+  used_fallback: boolean;
+  processing_time_ms: number;
+}
+
+// ── Source Configuration ──
 const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
@@ -11,77 +21,29 @@ const SOURCES = [
   { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.85 },
 ];
 
-// ── Topic Tagging (Expanded for Big Data Ecosystem) ──
+// ── Topic Tagging ──
 const TOPIC_TAGS: Record<string, string> = {
-  // Core engines
-  'apache spark': 'spark',
-  'spark 4': 'spark4',
-  'spark4': 'spark4',
-  'spark 3': 'spark',
-  'pyspark': 'spark',
-
-  // Table formats
-  'iceberg': 'iceberg',
-  'delta lake': 'delta',
-  'delta': 'delta',
-  'open table': 'iceberg',
-  'hudi': 'iceberg',
-
-  // Platforms
-  'databricks': 'databricks',
-  'fabric': 'fabric',
-  'microsoft fabric': 'fabric',
-  'fabric lakehouse': 'fabric',
-  'bigquery': 'bigquery',
-  'dataproc': 'bigquery',
-  'amazon emr': 'emr',
-  'emr serverless': 'emr',
-  'emr on eks': 'emr',
-  'emr studio': 'emr',
-  'azure synapse': 'fabric',
-
-  // Workloads
-  'structured streaming': 'streaming',
-  'streaming': 'streaming',
-  'real-time': 'streaming',
-  'kinesis': 'streaming',
-  'kafka': 'streaming',
-  'batch': 'batch',
-  'etl': 'batch',
-
-  // AI/ML
-  'machine learning': 'ai',
-  'mlflow': 'ai',
-  'artificial intelligence': 'ai',
-  ' ai ': 'ai',
-  'ai-powered': 'ai',
-  'llm': 'ai',
-  'genai': 'ai',
-  'generative ai': 'ai',
-
-  // Themes
-  'performance': 'performance',
-  'optimization': 'performance',
-  'latency': 'performance',
-  'benchmark': 'performance',
-  'cost': 'cost',
-  'pricing': 'cost',
-  'cost-effective': 'cost',
-  'governance': 'governance',
-  'unity catalog': 'governance',
-  'lake formation': 'governance',
-  'security': 'governance',
-
-  // Other
-  'photon': 'databricks',
-  'lakehouse': 'fabric',
-  'data lake': 'fabric',
-  'serverless': 'emr',
-  'sql': 'spark',
-  'kubernetes': 'streaming',
-  'k8s': 'streaming',
-  'aws glue': 'batch',
-  'glue etl': 'batch',
+  'apache spark': 'spark', 'spark 4': 'spark4', 'spark4': 'spark4',
+  'spark 3': 'spark', 'pyspark': 'spark',
+  'iceberg': 'iceberg', 'delta lake': 'delta', 'delta': 'delta',
+  'open table': 'iceberg', 'hudi': 'iceberg',
+  'databricks': 'databricks', 'fabric': 'fabric', 'microsoft fabric': 'fabric',
+  'fabric lakehouse': 'fabric', 'bigquery': 'bigquery', 'dataproc': 'bigquery',
+  'amazon emr': 'emr', 'emr serverless': 'emr', 'emr on eks': 'emr',
+  'emr studio': 'emr', 'azure synapse': 'fabric',
+  'structured streaming': 'streaming', 'streaming': 'streaming',
+  'real-time': 'streaming', 'kinesis': 'streaming', 'kafka': 'streaming',
+  'batch': 'batch', 'etl': 'batch',
+  'machine learning': 'ai', 'mlflow': 'ai', 'artificial intelligence': 'ai',
+  ' ai ': 'ai', 'ai-powered': 'ai', 'llm': 'ai', 'genai': 'ai', 'generative ai': 'ai',
+  'performance': 'performance', 'optimization': 'performance',
+  'latency': 'performance', 'benchmark': 'performance',
+  'cost': 'cost', 'pricing': 'cost', 'cost-effective': 'cost',
+  'governance': 'governance', 'unity catalog': 'governance',
+  'lake formation': 'governance', 'security': 'governance',
+  'photon': 'databricks', 'lakehouse': 'fabric', 'data lake': 'fabric',
+  'serverless': 'emr', 'sql': 'spark', 'kubernetes': 'streaming',
+  'k8s': 'streaming', 'aws glue': 'batch', 'glue etl': 'batch',
 };
 
 function extractTags(text: string): string[] {
@@ -93,7 +55,7 @@ function extractTags(text: string): string[] {
   return found.size > 0 ? [...found] : ['spark'];
 }
 
-// ── Relevance Filter for AWS ──
+// ── Filtering ──
 const AWS_RELEVANCE_KEYWORDS = [
   'apache spark', 'spark', 'amazon emr', 'emr serverless', 'emr on eks',
   'emr studio', 'pyspark', 'iceberg', 'hudi', 'delta lake',
@@ -102,26 +64,11 @@ const AWS_RELEVANCE_KEYWORDS = [
 ];
 
 const EXCLUDE_PATTERNS = [
-  /get started with/i,
-  /introduction to/i,
-  /what is (amazon|apache|azure|google)/i,
-  /beginner/i,
-  /^\s*tutorial:/i,
-  /how to get started/i,
-  /beginner.?s? guide/i,
-  /step.by.step/i,
+  /get started with/i, /introduction to/i,
+  /what is (amazon|apache|azure|google)/i, /beginner/i,
+  /^\s*tutorial:/i, /how to get started/i, /beginner.?s? guide/i, /step.by.step/i,
 ];
 
-function isRelevantForAws(title: string, summary: string): boolean {
-  const combined = `${title} ${summary}`.toLowerCase();
-  const hasRelevantKeyword = AWS_RELEVANCE_KEYWORDS.some((kw) => combined.includes(kw));
-  if (!hasRelevantKeyword) return false;
-  const fullText = `${title} ${summary}`;
-  if (EXCLUDE_PATTERNS.some((p) => p.test(fullText))) return false;
-  return true;
-}
-
-// ── Signal Filtering ──
 const NOISE_PATTERNS = [
   /skip to (main )?content/i,
   /cookie/i, /subscribe/i, /newsletter/i, /sign up/i, /log ?in/i,
@@ -131,7 +78,7 @@ const NOISE_PATTERNS = [
   /footer/i, /sidebar/i, /advertisement/i, /sponsored/i,
   /\bdf\b.*=.*spark\./i, /\.show\(\)/i, /\.filter\(/i, /\.select\(/i,
   /import \w+/i, /def \w+\(/i, /val \w+ =/i,
-  /!\[.*?\]\(.*?\)/i, // image markdown
+  /!\[.*?\]\(.*?\)/i,
 ];
 
 const LOW_SIGNAL_PATTERNS = [
@@ -150,15 +97,20 @@ interface ScrapedArticle {
   signalScore: number;
 }
 
+function isRelevantForAws(title: string, summary: string): boolean {
+  const combined = `${title} ${summary}`.toLowerCase();
+  if (!AWS_RELEVANCE_KEYWORDS.some((kw) => combined.includes(kw))) return false;
+  if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) return false;
+  return true;
+}
+
 function isNoise(title: string, summary: string): boolean {
-  const combined = `${title} ${summary}`;
-  return NOISE_PATTERNS.some((p) => p.test(combined));
+  return NOISE_PATTERNS.some((p) => p.test(`${title} ${summary}`));
 }
 
 function computeSignalScore(title: string, summary: string, sourceWeight: number): number {
   const combined = `${title} ${summary}`.toLowerCase();
   let score = sourceWeight * 5;
-
   const highSignal = [
     'launch', 'announce', 'release', 'general availability', 'ga ',
     'performance', 'improvement', 'optimization', 'breaking change',
@@ -169,26 +121,25 @@ function computeSignalScore(title: string, summary: string, sourceWeight: number
   for (const kw of highSignal) {
     if (combined.includes(kw)) score += 2;
   }
-
   if (LOW_SIGNAL_PATTERNS.some((p) => p.test(combined))) score -= 3;
   if (title.length < 15) score -= 2;
   if (summary.length < 30) score -= 1;
-
   return Math.max(0, score);
 }
 
 // ── Deduplication ──
-function deduplicateArticles(articles: ScrapedArticle[]): ScrapedArticle[] {
+function deduplicateArticles(articles: ScrapedArticle[]): { result: ScrapedArticle[]; removed: number } {
   const seen = new Map<string, ScrapedArticle>();
+  let removed = 0;
 
   for (const article of articles) {
     const normalized = article.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
-
     let isDupe = false;
     for (const [key, existing] of seen) {
       if (normalized === key) {
         if (article.signalScore > existing.signalScore) seen.set(key, article);
         isDupe = true;
+        removed++;
         break;
       }
       const words1 = new Set(normalized.split(' '));
@@ -201,20 +152,20 @@ function deduplicateArticles(articles: ScrapedArticle[]): ScrapedArticle[] {
           seen.set(normalized, article);
         }
         isDupe = true;
+        removed++;
         break;
       }
     }
     if (!isDupe) seen.set(normalized, article);
   }
 
-  return [...seen.values()];
+  return { result: [...seen.values()], removed };
 }
 
-// ── Clean summary text ──
 function cleanSummaryText(text: string): string {
   return text
-    .replace(/!\[.*?\]\(.*?\)/g, '') // remove image markdown
-    .replace(/\[([^\]]*)\]\([^)]+\)/g, '$1') // links to text
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]+\)/g, '$1')
     .replace(/[#*`]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -259,7 +210,7 @@ function extractArticlesFromMarkdown(
   return articles;
 }
 
-// ── AI Summarization with Clustering ──
+// ── AI Summarization (optimised: flash-lite for cost, tight prompt) ──
 const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
 async function aiSummarize(articles: ScrapedArticle[]): Promise<{
@@ -271,32 +222,20 @@ async function aiSummarize(articles: ScrapedArticle[]): Promise<{
   const lovableKey = Deno.env.get('LOVABLE_API_KEY');
   if (!lovableKey) return null;
 
+  // Compact article representation to minimise tokens
   const articleText = articles
-    .slice(0, 15)
-    .map((a, i) => `${i + 1}. [${a.source}] ${a.title}: ${a.summary} (tags: ${a.tags.join(', ')})`)
+    .slice(0, 10)
+    .map((a, i) => `${i + 1}.[${a.source}] ${a.title} — ${a.summary.slice(0, 100)} [${a.tags.join(',')}]`)
     .join('\n');
 
-  const prompt = `You are a senior data platform product leader analyzing today's big data ecosystem updates across Spark, Iceberg, Delta Lake, Fabric, EMR, BigQuery, and Databricks.
+  const prompt = `Analyze these big data ecosystem updates. Return JSON only.
 
-Here are today's articles:
 ${articleText}
 
-Respond in this exact JSON format:
-{
-  "topInsight": "One sentence: the single most important takeaway",
-  "highlights": ["highlight 1", ...max 5, high-signal only],
-  "trends": ["cross-article pattern 1", ...max 4],
-  "impact": ["strategic implication 1", ...max 3]
-}
+JSON format:
+{"topInsight":"one sentence key takeaway","highlights":["max 5 high-signal items"],"trends":["3-4 cross-article patterns"],"impact":["max 3 strategic implications"]}
 
-Rules:
-- CLUSTER similar updates into a single summarized insight (e.g. multiple Iceberg articles → one bullet)
-- Only include HIGH-IMPACT updates (product launches, major improvements, architecture changes, strategic moves)
-- For each highlight, note if it's a competitive move and which vendor it impacts
-- Skip tutorials, marketing fluff, minor blog posts
-- Be concise, focus on industry impact
-- Identify cross-article patterns for trends
-- For impact, explain WHY it matters to data engineering leaders`;
+Rules: cluster similar updates, skip tutorials/marketing, focus on product launches, perf improvements, architecture changes. Be concise.`;
 
   try {
     const resp = await fetch(AI_GATEWAY_URL, {
@@ -306,9 +245,9 @@ Rules:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
-          { role: 'system', content: 'You are a concise data engineering analyst. Respond only with valid JSON.' },
+          { role: 'system', content: 'Respond only with valid JSON. No markdown.' },
           { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
@@ -339,7 +278,7 @@ Rules:
   }
 }
 
-// ── Trend Detection with History ──
+// ── Trend Detection ──
 function deriveTrends(
   articles: ScrapedArticle[],
   previousTagCounts?: Record<string, number>
@@ -404,17 +343,22 @@ function getSupabaseClient() {
   return { url, key };
 }
 
-async function loadPreviousTagCounts(): Promise<Record<string, number> | undefined> {
+async function loadPreviousSnapshot(): Promise<{
+  tag_counts?: Record<string, number>;
+  summary?: Record<string, unknown>;
+  article_count?: number;
+  date?: string;
+} | undefined> {
   const sb = getSupabaseClient();
   if (!sb) return undefined;
   try {
     const resp = await fetch(
-      `${sb.url}/rest/v1/spark_daily_snapshots?order=date.desc&limit=1&select=tag_counts`,
+      `${sb.url}/rest/v1/spark_daily_snapshots?order=date.desc&limit=1&select=tag_counts,summary,article_count,date`,
       { headers: { 'apikey': sb.key, 'Authorization': `Bearer ${sb.key}` } }
     );
     if (!resp.ok) return undefined;
     const rows = await resp.json();
-    return rows[0]?.tag_counts || undefined;
+    return rows[0] || undefined;
   } catch { return undefined; }
 }
 
@@ -439,6 +383,16 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const metrics: PipelineMetrics = {
+    articles_fetched: 0,
+    articles_after_filter: 0,
+    duplicates_removed: 0,
+    summary_generated: false,
+    used_fallback: false,
+    processing_time_ms: 0,
+  };
+
   try {
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
@@ -450,6 +404,7 @@ Deno.serve(async (req) => {
 
     console.log('Starting big data ecosystem scrape...');
 
+    // Step 1: Ingest — fetch from all sources in parallel
     const scrapePromises = SOURCES.map(async (source) => {
       try {
         console.log(`Scraping ${source.name}: ${source.url}`);
@@ -458,12 +413,10 @@ Deno.serve(async (req) => {
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: source.url, formats: ['markdown'], onlyMainContent: true }),
         });
-
         if (!response.ok) {
           console.error(`Failed to scrape ${source.name}: ${response.status}`);
           return [];
         }
-
         const data = await response.json();
         const markdown = data.data?.markdown || data.markdown || '';
         return extractArticlesFromMarkdown(markdown, source.name, source.url, source.weight);
@@ -475,45 +428,98 @@ Deno.serve(async (req) => {
 
     const results = await Promise.all(scrapePromises);
     let allArticles = results.flat();
+    metrics.articles_fetched = allArticles.length;
 
     console.log(`Scraped ${allArticles.length} raw articles`);
 
+    // Load previous snapshot (needed for trends AND fallback)
+    const previousSnapshot = await loadPreviousSnapshot();
+
+    // Step 2-5: Filter, Deduplicate, Tag, Sort
     if (allArticles.length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'No data fetched from any source' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // ── Fallback: use previous day's data ──
+      console.log('No articles fetched, falling back to previous snapshot');
+      metrics.used_fallback = true;
+
+      if (previousSnapshot?.summary) {
+        const today = new Date().toISOString().split('T')[0];
+        const prevSummary = previousSnapshot.summary as { topInsight?: string; highlights?: string[]; trends?: string[]; impact?: string[] };
+        metrics.processing_time_ms = Date.now() - startTime;
+
+        return new Response(JSON.stringify({
+          success: true,
+          data: {
+            date: previousSnapshot.date || today,
+            summary: prevSummary,
+            articles: [],
+            trends: deriveTrends([], previousSnapshot.tag_counts as Record<string, number>),
+          },
+          metrics,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // No previous snapshot either — return minimal valid response
+      metrics.processing_time_ms = Date.now() - startTime;
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          date: new Date().toISOString().split('T')[0],
+          summary: {
+            topInsight: 'No significant updates detected today across the big data ecosystem',
+            highlights: ['Monitoring Spark, Iceberg, Delta Lake, Fabric, EMR, and BigQuery for updates'],
+            trends: ['All tracked topics stable'],
+            impact: ['No major ecosystem shifts detected today'],
+          },
+          articles: [],
+          trends: [],
+        },
+        metrics,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    allArticles = deduplicateArticles(allArticles);
-    allArticles.sort((a, b) => b.signalScore - a.signalScore);
-    allArticles = allArticles.slice(0, 10); // Max 10 articles
+    // Deduplicate
+    const { result: dedupedArticles, removed } = deduplicateArticles(allArticles);
+    metrics.duplicates_removed = removed;
 
-    const previousTagCounts = await loadPreviousTagCounts();
-    const trends = deriveTrends(allArticles, previousTagCounts);
-    const aiSummary = await aiSummarize(allArticles);
-    const summary = aiSummary || fallbackSummary(allArticles);
+    // Sort by signal score, cap at 10
+    const finalArticles = dedupedArticles
+      .sort((a, b) => b.signalScore - a.signalScore)
+      .slice(0, 10);
+    metrics.articles_after_filter = finalArticles.length;
 
+    // Step 6: Trend detection
+    const trends = deriveTrends(finalArticles, previousSnapshot?.tag_counts as Record<string, number> | undefined);
+
+    // Step 7: AI Summarization
+    const aiSummary = await aiSummarize(finalArticles);
+    const summary = aiSummary || fallbackSummary(finalArticles);
+    metrics.summary_generated = !!aiSummary;
+
+    // Step 8: Save snapshot
     const today = new Date().toISOString().split('T')[0];
     const tagCounts: Record<string, number> = {};
-    for (const a of allArticles) {
+    for (const a of finalArticles) {
       for (const t of a.tags) { tagCounts[t] = (tagCounts[t] || 0) + 1; }
     }
-    await saveSnapshot(today, tagCounts, allArticles.length, summary);
+    await saveSnapshot(today, tagCounts, finalArticles.length, summary);
 
-    const cleanArticles = allArticles.map(({ weight: _w, signalScore: _s, ...rest }) => rest);
+    // Clean response (remove internal fields)
+    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, ...rest }) => rest);
+    metrics.processing_time_ms = Date.now() - startTime;
 
-    console.log(`Returning ${cleanArticles.length} articles, ${trends.length} trends`);
+    console.log(`Returning ${cleanArticles.length} articles, ${trends.length} trends | metrics: fetched=${metrics.articles_fetched} filtered=${metrics.articles_after_filter} deduped=${metrics.duplicates_removed} ai=${metrics.summary_generated}`);
 
     return new Response(JSON.stringify({
       success: true,
       data: { date: today, summary, articles: cleanArticles, trends },
+      metrics,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Scrape error:', error);
+    metrics.processing_time_ms = Date.now() - startTime;
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ success: false, error: msg }),
+      JSON.stringify({ success: false, error: msg, metrics }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
