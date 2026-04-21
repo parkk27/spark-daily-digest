@@ -18,7 +18,9 @@ const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
   { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/', weight: 0.9 },
-  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.85 },
+  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.9 },
+  { name: 'iceberg', url: 'https://iceberg.apache.org/blogs/', weight: 0.95 },
+  { name: 'dataproc', url: 'https://cloud.google.com/dataproc/docs/release-notes', weight: 0.85 },
 ];
 
 // ── Topic Tagging ──
@@ -197,7 +199,7 @@ function extractArticlesFromMarkdown(
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
 
     if (isNoise(title, summary)) continue;
-    if (sourceName === 'aws' && !isRelevantForAws(title, summary)) continue;
+    if ((sourceName === 'aws' || sourceName === 'dataproc') && !isRelevantForAws(title, summary)) continue;
     if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
 
     const tags = extractTags(`${title} ${summary}`);
@@ -411,7 +413,12 @@ Deno.serve(async (req) => {
         const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: source.url, formats: ['markdown'], onlyMainContent: true }),
+          body: JSON.stringify({
+            url: source.url,
+            formats: ['markdown'],
+            onlyMainContent: true,
+            maxAge: 3600000, // Re-scrape if cache > 1 hour (ensures freshness)
+          }),
         });
         if (!response.ok) {
           console.error(`Failed to scrape ${source.name}: ${response.status}`);
