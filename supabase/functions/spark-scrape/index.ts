@@ -515,7 +515,8 @@ Deno.serve(async (req) => {
 
     console.log('Starting big data ecosystem scrape...');
 
-    // Step 1: Ingest — fetch from all sources in parallel
+    // Step 1: Ingest — fetch from all sources in parallel.
+    // Lower cache TTL since cron now runs every 6 hours.
     const scrapePromises = SOURCES.map(async (source) => {
       try {
         console.log(`Scraping ${source.name}: ${source.url}`);
@@ -526,7 +527,7 @@ Deno.serve(async (req) => {
             url: source.url,
             formats: ['markdown'],
             onlyMainContent: true,
-            maxAge: 3600000, // Re-scrape if cache > 1 hour (ensures freshness)
+            maxAge: 900000, // 15 min — fresher pulls between cron runs
           }),
         });
         if (!response.ok) {
@@ -542,14 +543,16 @@ Deno.serve(async (req) => {
       }
     });
 
-    const results = await Promise.all(scrapePromises);
+    // Run scrape + history lookups in parallel — they don't depend on each other.
+    const [results, previousSnapshot, recentLinks] = await Promise.all([
+      Promise.all(scrapePromises),
+      loadPreviousSnapshot(),
+      loadRecentArticleLinks(7),
+    ]);
     let allArticles = results.flat();
     metrics.articles_fetched = allArticles.length;
 
-    console.log(`Scraped ${allArticles.length} raw articles`);
-
-    // Load previous snapshot (needed for trends AND fallback)
-    const previousSnapshot = await loadPreviousSnapshot();
+    console.log(`Scraped ${allArticles.length} raw articles (recent-link memory: ${recentLinks.size})`);
 
     // Step 2-5: Filter, Deduplicate, Tag, Sort
     if (allArticles.length === 0) {
