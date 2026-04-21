@@ -19,14 +19,12 @@ interface PipelineMetrics {
 const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
   { name: 'databricks-eng', url: 'https://www.databricks.com/blog/category/engineering', weight: 1.0 },
+  { name: 'databricks-oss', url: 'https://www.databricks.com/blog/category/open-source', weight: 1.0 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
   { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/category/analytics/', weight: 0.9 },
   { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/feed/', weight: 0.9 },
   { name: 'iceberg', url: 'https://iceberg.apache.org/blogs/', weight: 0.95 },
-  { name: 'iceberg-releases', url: 'https://github.com/apache/iceberg/releases', weight: 1.0 },
   { name: 'delta', url: 'https://delta.io/blog/', weight: 0.95 },
-  { name: 'spark', url: 'https://spark.apache.org/news/', weight: 1.0 },
-  { name: 'dataproc', url: 'https://cloud.google.com/dataproc/docs/release-notes', weight: 0.85 },
 ];
 
 // ── Topic Tagging ──
@@ -112,8 +110,39 @@ interface ScrapedArticle {
 function displaySource(rawSource: string): string {
   if (rawSource.startsWith('databricks')) return 'databricks';
   if (rawSource.startsWith('iceberg')) return 'iceberg';
-  if (rawSource === 'dataproc') return 'google';
   return rawSource;
+}
+
+// ── Release-note rejection patterns ──
+// Strip out version dumps, changelogs, and bare "X.Y.Z released" announcements
+// so the feed favors analysis posts (deep dives, case studies, architecture).
+const RELEASE_NOTE_PATTERNS = [
+  /^(release notes?|changelog|what.?s new in)/i,
+  /\b(v?\d+\.\d+(\.\d+)?)\s*(released|available|now ga|is out)\b/i,
+  /\brelease\s+v?\d+\.\d+/i,
+  /\b(patch|hotfix|bugfix)\s+release\b/i,
+  /^(version\s+\d+|tag\s+v?\d+)/i,
+  /\bgithub\.com\/.+\/releases\//i,
+];
+
+// Analytical phrases — strong signal that a post offers strategic insight.
+const ANALYSIS_KEYWORDS = [
+  'lessons learned', 'deep dive', 'under the hood', 'how we', 'why we',
+  'case study', 'benchmark results', 'architecture', 'design', 'comparison',
+  ' vs ', 'tradeoff', 'best practices', 'pattern', 'strategy', 'analysis',
+  'insights', 'inside', 'evolution', 'journey',
+];
+
+function isReleaseNote(title: string, summary: string, link: string): boolean {
+  const hay = `${title} ${summary}`;
+  if (RELEASE_NOTE_PATTERNS.some((p) => p.test(hay))) return true;
+  if (/github\.com\/.+\/releases\//i.test(link)) return true;
+  return false;
+}
+
+function hasAnalysisSignal(title: string, summary: string): boolean {
+  const combined = `${title} ${summary}`.toLowerCase();
+  return ANALYSIS_KEYWORDS.some((kw) => combined.includes(kw));
 }
 
 function isRelevantForAws(title: string, summary: string): boolean {
@@ -131,15 +160,19 @@ function computeSignalScore(title: string, summary: string, sourceWeight: number
   const combined = `${title} ${summary}`.toLowerCase();
   let score = sourceWeight * 5;
   const highSignal = [
-    'launch', 'announce', 'release', 'general availability', 'ga ',
-    'performance', 'improvement', 'optimization', 'breaking change',
-    'architecture', 'strategic', 'acquisition', 'partnership',
-    'benchmark', 'preview', 'roadmap', 'milestone', 'competitive',
-    'cost reduction', 'scalability', 'migration',
+    'launch', 'announce', 'performance', 'improvement', 'optimization',
+    'breaking change', 'architecture', 'strategic', 'acquisition',
+    'partnership', 'benchmark', 'preview', 'roadmap', 'milestone',
+    'competitive', 'cost reduction', 'scalability', 'migration',
   ];
   for (const kw of highSignal) {
     if (combined.includes(kw)) score += 2;
   }
+  // Strong analytical-content boost (capped at +3 — once is enough).
+  if (ANALYSIS_KEYWORDS.some((kw) => combined.includes(kw))) score += 3;
+  // Penalize release-flavored phrasing that slips past pattern filter.
+  const releaseFlavor = ['release notes', 'changelog', 'now generally available', 'is now available'];
+  if (releaseFlavor.some((kw) => combined.includes(kw))) score -= 4;
   if (LOW_SIGNAL_PATTERNS.some((p) => p.test(combined))) score -= 3;
   if (title.length < 15) score -= 2;
   if (summary.length < 30) score -= 1;
@@ -258,9 +291,15 @@ function extractArticlesFromMarkdown(
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
 
     if (isNoise(title, summary)) continue;
-    // AWS feed and Dataproc release notes are noisy — only keep big-data-relevant items.
-    if ((sourceName === 'aws' || sourceName === 'dataproc') && !isRelevantForAws(title, summary)) continue;
+    // AWS feed is noisy — only keep big-data-relevant items.
+    if (sourceName === 'aws' && !isRelevantForAws(title, summary)) continue;
     if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
+    // Drop release notes / changelogs / version dumps — keep analysis only.
+    if (isReleaseNote(title, summary, link)) continue;
+
+    const hasAnalysis = hasAnalysisSignal(title, summary);
+    // Require depth: short stub summaries are usually release announcements.
+    if (summary.length < 80 && !hasAnalysis) continue;
 
     // Date extraction + freshness filter
     const publishedAt = extractPublishedDate(section);
@@ -271,7 +310,8 @@ function extractArticlesFromMarkdown(
     let signalScore = computeSignalScore(title, summary, sourceWeight);
     // Recency boost: very fresh posts (<= 3 days) get a small bump.
     if (age !== undefined && age <= 3) signalScore += 2;
-    if (signalScore < 3) continue;
+    // Higher cutoff — only well-scored analytical posts make it through.
+    if (signalScore < 6) continue;
 
     articles.push({
       title,
@@ -316,7 +356,7 @@ ${articleText}
 JSON format:
 {"topInsight":"one sentence key takeaway","highlights":["max 5 high-signal items"],"trends":["3-4 cross-article patterns"],"impact":["max 3 strategic implications"]}
 
-Rules: cluster similar updates, skip tutorials/marketing, focus on product launches, perf improvements, architecture changes. Be concise.`;
+Rules: focus on analytical posts with strategic takeaways (architecture decisions, performance analyses, case studies, comparisons). Skip pure release notes, version announcements, and changelogs. Cluster similar updates. Be concise.`;
 
   try {
     const resp = await fetch(AI_GATEWAY_URL, {
