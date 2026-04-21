@@ -14,12 +14,18 @@ interface PipelineMetrics {
 }
 
 // ── Source Configuration ──
+// Mix of landing pages + date-ordered feeds/category pages so the scraper sees
+// fresh content as vendors publish, not just sticky "featured" hero posts.
 const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
+  { name: 'databricks-eng', url: 'https://www.databricks.com/blog/category/engineering', weight: 1.0 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
-  { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/', weight: 0.9 },
-  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.9 },
+  { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/category/analytics/', weight: 0.9 },
+  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/feed/', weight: 0.9 },
   { name: 'iceberg', url: 'https://iceberg.apache.org/blogs/', weight: 0.95 },
+  { name: 'iceberg-releases', url: 'https://github.com/apache/iceberg/releases', weight: 1.0 },
+  { name: 'delta', url: 'https://delta.io/blog/', weight: 0.95 },
+  { name: 'spark', url: 'https://spark.apache.org/news/', weight: 1.0 },
   { name: 'dataproc', url: 'https://cloud.google.com/dataproc/docs/release-notes', weight: 0.85 },
 ];
 
