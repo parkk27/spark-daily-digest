@@ -674,28 +674,32 @@ Deno.serve(async (req) => {
     const { result: dedupedArticles, removed } = deduplicateArticles(allArticles);
     metrics.duplicates_removed = removed;
 
-    // ── Freshness scoring against recent snapshots ──
+    // ── Freshness scoring: strict-tier ranking only ──
     // Boost links we've never shown (+4); penalise links shown in last 3 days (-3).
-    // This forces the feed to rotate even when vendor landing pages are sticky.
+    // We compute an adjusted score for the Home/AI tier so it rotates each run.
+    // The News tier intentionally ignores this so older-but-still-valid links
+    // remain visible and the feed never collapses to zero.
+    const adjustedScore = new Map<ScrapedArticle, number>();
     for (const a of dedupedArticles) {
       const seenDaysAgo = recentLinks.get(a.link);
-      if (seenDaysAgo === undefined) {
-        a.signalScore += 4;
-      } else if (seenDaysAgo <= 3) {
-        a.signalScore -= 3;
-      }
+      let s = a.signalScore;
+      if (seenDaysAgo === undefined) s += 4;
+      else if (seenDaysAgo <= 3) s -= 3;
+      adjustedScore.set(a, s);
     }
 
-    // Sort by adjusted signal score
-    const sorted = dedupedArticles.sort((a, b) => b.signalScore - a.signalScore);
+    // Sort by adjusted score for strict tier
+    const sortedStrict = [...dedupedArticles].sort(
+      (a, b) => (adjustedScore.get(b) ?? 0) - (adjustedScore.get(a) ?? 0)
+    );
 
     // ── Tier A: Strict highlights (Home page + AI summary) ──
-    // signalScore >= 6, max 3 per vendor, top 10.
+    // adjusted signalScore >= 6, max 3 per vendor, top 10.
     const STRICT_CAP = 3;
     const strictPerSource = new Map<string, number>();
     const finalArticles: ScrapedArticle[] = [];
-    for (const a of sorted) {
-      if (a.signalScore < 6) continue;
+    for (const a of sortedStrict) {
+      if ((adjustedScore.get(a) ?? 0) < 6) continue;
       const used = strictPerSource.get(a.source) ?? 0;
       if (used >= STRICT_CAP) continue;
       finalArticles.push(a);
@@ -705,11 +709,12 @@ Deno.serve(async (req) => {
     metrics.articles_after_filter = finalArticles.length;
 
     // ── Tier B: Relaxed feed (News page) ──
-    // All deduped articles, max 5 per vendor, up to 30 items.
+    // Sort by raw signalScore (no recency penalty), max 5 per vendor, up to 30.
+    const sortedRelaxed = [...dedupedArticles].sort((a, b) => b.signalScore - a.signalScore);
     const RELAXED_CAP = 5;
     const relaxedPerSource = new Map<string, number>();
     const newsArticles: ScrapedArticle[] = [];
-    for (const a of sorted) {
+    for (const a of sortedRelaxed) {
       const used = relaxedPerSource.get(a.source) ?? 0;
       if (used >= RELAXED_CAP) continue;
       newsArticles.push(a);
