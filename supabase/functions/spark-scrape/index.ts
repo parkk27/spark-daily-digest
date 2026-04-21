@@ -310,9 +310,8 @@ function extractArticlesFromMarkdown(
     let signalScore = computeSignalScore(title, summary, sourceWeight);
     // Recency boost: very fresh posts (<= 3 days) get a small bump.
     if (age !== undefined && age <= 3) signalScore += 2;
-    // Relaxed gate — keeps a broad set for the News feed.
-    // Strict tier (signalScore >= 6) is filtered out later for Home highlights.
-    if (signalScore < 3) continue;
+    // No score gate at extraction — Tier B (News) accepts anything that
+    // passed noise/release/exclude/age filters. Tier A (Home) gates on >= 6 later.
 
     articles.push({
       title,
