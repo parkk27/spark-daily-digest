@@ -1,52 +1,41 @@
 
 
-## Goal
+## Why the News page is empty
 
-The News feed currently only shows 2 articles because the strict analytical filters in the scrape pipeline are too aggressive. The user wants to see **more variety on the News page** while keeping the curated, analytical highlights on the Home page.
+The last scrape only returned 6 raw articles across all 8 sources (Firecrawl is giving thin markdown for the category pages right now). After the `signalScore >= 3` cutoff and the `-3` "seen recently" penalty, the relaxed tier collapsed too. Older snapshots in the DB don't have the `all_articles` field yet (it was just introduced), so there's nothing to fall back to either.
 
-## Approach
+## Fix
 
-Decouple the **News feed** (broad, varied) from the **Home page highlights** (strict, analytical). The Home page keeps the high-bar curation; the News page shows everything we managed to ingest.
+Make the News feed never go empty by (a) loosening the relaxed tier and (b) backfilling from the last 10 days of snapshots when today is thin.
 
-## Changes
+### 1. `supabase/functions/spark-scrape/index.ts` — relax Tier B further
 
-### 1. `supabase/functions/spark-scrape/index.ts`
+- **Drop the signal-score cutoff for Tier B.** Today only the strict tier (Home) needs `signalScore >= 6`. The News tier should accept any article that passed the basic extraction filter (release-note rejection, exclude patterns, age ≤ 14 days). Per-source cap stays at 5, total cap stays at 30.
+- **Skip the recency penalty when scoring the News tier.** Apply the +4 "unseen" boost and -3 "seen recently" penalty only to the strict tier ranking. The News tier should re-include older-but-still-valid links so the feed never empties.
+- **Add a backfill step**: after building today's `newsArticles`, if `< 12`, query the last 10 days of `spark_daily_snapshots`, pull each row's `summary.all_articles`, dedupe by link against today's set, and append — preserving each article's original `date` field so the News page groups them under their actual day. Cap total merged list at 40.
 
-Split the pipeline into two tiers stored in the same snapshot:
+### 2. `supabase/functions/spark-scrape/index.ts` — backwards-compatible history read
 
-- **`articles`** (existing field) — stays strict (signalScore ≥ 6, analytical only). Powers the Home page highlights and the daily AI summary.
-- **`all_articles`** (new field in snapshot JSON) — relaxed tier (signalScore ≥ 3, no 80-char summary requirement, release-note rejection still applies). Up to ~30 items, deduped, with per-source cap raised from 3 → 5.
+When reading historical snapshots for backfill, also accept old-shape rows that don't have `all_articles` (those will simply contribute nothing — no error). Going forward, every snapshot writes `all_articles`, so the backfill pool grows day by day.
 
-Both tiers come from the same scrape pass — no extra Firecrawl calls. We just keep two filtered views of the same fetched articles.
+### 3. `src/pages/NewsPage.tsx` — graceful empty state
 
-Persistence: extend the `summary` JSONB to include `all_articles: Article[]` alongside the existing fields. No schema migration needed.
+If `allArticles` is still empty after backfill (truly nothing in the last 10 days), show a clearer message: "No fresh articles in the last 10 days. The next scrape runs every 6 hours." Keep current grouping-by-date UI otherwise.
 
-### 2. `src/hooks/useSparkData.ts`
+### 4. Trigger a fresh scrape after deploy
 
-Extend `SparkData` to expose both tiers:
-- `articles` (strict, for Home)
-- `allArticles` (relaxed, for News)
-
-Read `all_articles` from the edge function response, falling back to `articles` if older snapshots don't have the new field.
-
-### 3. `src/pages/NewsPage.tsx`
-
-Switch from `data.articles` → `data.allArticles`. Same UI, same grouping by date, same source badges — just a richer dataset.
-
-### 4. Trigger a fresh scrape
-
-Run `spark-scrape` once after deploy so today's snapshot includes the new `all_articles` field. Until that runs, the News page falls back to the strict list (no breakage).
+Run `spark-scrape` once so today's snapshot gets the new `all_articles` field populated and the backfill starts working immediately for future runs.
 
 ## What stays the same
 
-- Home page (`HomePage.tsx`) and Trends page — unchanged, still backed by the curated `articles` list and AI summary.
-- Database schema — only the JSON contents grow.
-- Cron schedule, freshness memory, dedup, AI prompt, Firecrawl settings — unchanged.
-- Release-note rejection (GitHub releases, changelogs, version dumps) still applies to **both** tiers.
+- Home page strict tier (`signalScore >= 6`, max 3/source) — unchanged.
+- AI summary, trend detection, freshness memory for the strict tier — unchanged.
+- Database schema, cron schedule, Firecrawl settings, RLS — unchanged.
+- News page UI: still grouped by date, still uses `SourceBadge`.
 
 ## Expected outcome
 
-- News page shows 15–25 articles per day across all vendors (Databricks, AWS, Azure, GCP, Iceberg, Delta, etc.) instead of 2.
-- Home page highlights stay tight and analytical.
-- No release-note pollution on either page.
+- News page shows **at least 12 articles** as long as anything was scraped in the last 10 days, grouped by their original publish date.
+- "Today" section shows whatever fresh items today's scrape produced; older sections fill in from the historical pool.
+- No more empty-state when a single scrape happens to be thin.
 
