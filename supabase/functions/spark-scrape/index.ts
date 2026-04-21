@@ -513,6 +513,38 @@ async function loadRecentArticleLinks(days: number): Promise<Map<string, number>
   return seen;
 }
 
+// Load `all_articles` from the last N days of snapshots for News-feed backfill.
+// Returns articles with their original dates preserved; tolerates old-shape rows.
+async function loadHistoricalNewsArticles(days: number): Promise<Array<Record<string, unknown> & { link?: string; date?: string }>> {
+  const sb = getSupabaseClient();
+  if (!sb) return [];
+  try {
+    const resp = await fetch(
+      `${sb.url}/rest/v1/spark_daily_snapshots?order=date.desc&limit=${days}&select=date,summary`,
+      { headers: { 'apikey': sb.key, 'Authorization': `Bearer ${sb.key}` } }
+    );
+    if (!resp.ok) return [];
+    const rows = await resp.json() as Array<{ date: string; summary: { all_articles?: unknown[] } | null }>;
+    const out: Array<Record<string, unknown>> = [];
+    for (const row of rows) {
+      const items = row.summary?.all_articles;
+      if (!Array.isArray(items)) continue;
+      for (const item of items) {
+        if (item && typeof item === 'object') {
+          const obj = item as Record<string, unknown>;
+          // Preserve original date if present, else stamp with the snapshot date.
+          if (!obj.date) obj.date = row.date;
+          out.push(obj);
+        }
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error('Failed to load historical news articles:', err);
+    return [];
+  }
+}
+
 async function saveSnapshot(date: string, tagCounts: Record<string, number>, articleCount: number, summary: Record<string, unknown>) {
   const sb = getSupabaseClient();
   if (!sb) return;
