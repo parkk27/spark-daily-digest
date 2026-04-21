@@ -632,6 +632,7 @@ Deno.serve(async (req) => {
             impact: ['No major ecosystem shifts detected today'],
           },
           articles: [],
+          all_articles: [],
           trends: [],
         },
         metrics,
