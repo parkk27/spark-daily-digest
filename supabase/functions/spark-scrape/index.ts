@@ -443,6 +443,36 @@ async function loadPreviousSnapshot(): Promise<{
   } catch { return undefined; }
 }
 
+// Load article links seen in the last N days, mapped to days-ago.
+// Used to boost unseen articles and penalise recently-shown ones.
+async function loadRecentArticleLinks(days: number): Promise<Map<string, number>> {
+  const seen = new Map<string, number>();
+  const sb = getSupabaseClient();
+  if (!sb) return seen;
+  try {
+    const resp = await fetch(
+      `${sb.url}/rest/v1/spark_daily_snapshots?order=date.desc&limit=${days}&select=date,summary`,
+      { headers: { 'apikey': sb.key, 'Authorization': `Bearer ${sb.key}` } }
+    );
+    if (!resp.ok) return seen;
+    const rows = await resp.json() as Array<{ date: string; summary: { article_links?: string[] } | null }>;
+    const today = new Date();
+    for (const row of rows) {
+      const links = row.summary?.article_links;
+      if (!Array.isArray(links)) continue;
+      const rowDate = new Date(`${row.date}T00:00:00Z`);
+      const daysAgo = Math.max(0, Math.floor((today.getTime() - rowDate.getTime()) / 86400000));
+      for (const link of links) {
+        const prev = seen.get(link);
+        if (prev === undefined || daysAgo < prev) seen.set(link, daysAgo);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load recent article links:', err);
+  }
+  return seen;
+}
+
 async function saveSnapshot(date: string, tagCounts: Record<string, number>, articleCount: number, summary: Record<string, unknown>) {
   const sb = getSupabaseClient();
   if (!sb) return;
