@@ -160,15 +160,19 @@ function computeSignalScore(title: string, summary: string, sourceWeight: number
   const combined = `${title} ${summary}`.toLowerCase();
   let score = sourceWeight * 5;
   const highSignal = [
-    'launch', 'announce', 'release', 'general availability', 'ga ',
-    'performance', 'improvement', 'optimization', 'breaking change',
-    'architecture', 'strategic', 'acquisition', 'partnership',
-    'benchmark', 'preview', 'roadmap', 'milestone', 'competitive',
-    'cost reduction', 'scalability', 'migration',
+    'launch', 'announce', 'performance', 'improvement', 'optimization',
+    'breaking change', 'architecture', 'strategic', 'acquisition',
+    'partnership', 'benchmark', 'preview', 'roadmap', 'milestone',
+    'competitive', 'cost reduction', 'scalability', 'migration',
   ];
   for (const kw of highSignal) {
     if (combined.includes(kw)) score += 2;
   }
+  // Strong analytical-content boost (capped at +3 — once is enough).
+  if (ANALYSIS_KEYWORDS.some((kw) => combined.includes(kw))) score += 3;
+  // Penalize release-flavored phrasing that slips past pattern filter.
+  const releaseFlavor = ['release notes', 'changelog', 'now generally available', 'is now available'];
+  if (releaseFlavor.some((kw) => combined.includes(kw))) score -= 4;
   if (LOW_SIGNAL_PATTERNS.some((p) => p.test(combined))) score -= 3;
   if (title.length < 15) score -= 2;
   if (summary.length < 30) score -= 1;
