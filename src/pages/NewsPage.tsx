@@ -5,7 +5,7 @@ import { useSparkData } from "@/hooks/useSparkData";
 
 const NewsPage = () => {
   const { data, isLoading } = useSparkData();
-  const articles = data?.articles ?? [];
+  const articles = data?.allArticles ?? [];
 
   const grouped = articles.reduce<Record<string, typeof articles>>((acc, article) => {
     const d = article.date ?? "unknown";
