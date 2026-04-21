@@ -1,69 +1,62 @@
 
 
-## Why the news isn't refreshing
+## Goal
 
-**Diagnosis** (confirmed by inspecting the data and the scraper):
+Filter the feed to favor **analytical blog posts** (with insights, strategic takeaways, deep-dives) and **drop release-note style sources** (GitHub releases, changelogs, version dumps).
 
-1. **Vendor blog landing pages are sticky.** We scrape the homepage of each blog (e.g. `databricks.com/blog`, `azure.microsoft.com/en-us/blog/`). These pages feature the same "hero" posts for days or weeks. Looking at the last 4 daily snapshots, the highlights are nearly identical (Forrester Wave, Agent Bricks, Smart Tier, Data+AI Summit) repeating from Apr 18 → Apr 21.
-2. **We sort by signal score and take the top 10.** The same high-signal hero posts always win, even when fresher (lower-scored) posts exist on the page.
-3. **No "freshness memory."** We never check whether an article link was already shown in a previous snapshot, so yesterday's stories dominate again today.
-4. **Firecrawl caches.** `maxAge: 3600000` (1 hour) is fine, but the source pages themselves rarely change.
-5. **No publication-date filtering.** Even when a vendor publishes 5 new posts, our extraction grabs whatever is at the top of the markdown (usually the "featured" section).
+## Changes — `supabase/functions/spark-scrape/index.ts`
 
-## Fix Plan — make the feed actually fresh daily
+**1. Remove pure release-note sources from `SOURCES`**
+- Remove `iceberg-releases` → `https://github.com/apache/iceberg/releases` (raw version tags, no analysis)
+- Remove `dataproc` → `https://cloud.google.com/dataproc/docs/release-notes` (changelog format)
+- Replace `spark` news feed (`/news/`, mostly version announcements) with `https://www.databricks.com/blog/category/open-source` for Spark-ecosystem analysis. Optional: keep `spark` only if filtered to non-release items.
+- Keep all analytical blogs: Databricks, Databricks Engineering, Azure Analytics, AWS Big Data feed, Iceberg blogs, Delta blog, GCP data-analytics.
 
-**1. Track recently-seen article links**
-- Query `spark_daily_snapshots` for the last 7 days of articles (store article links in the snapshot JSON going forward).
-- During scoring, **boost** unseen links by +4 and **penalize** links seen in the last 3 days by -3. This ensures fresh stories surface even if their raw signal is slightly lower than an evergreen hero post.
+**2. Add a "release-note" rejection filter** (new `RELEASE_NOTE_PATTERNS`)
+Reject any article whose title/summary matches:
+- `/^(release notes?|changelog|what.?s new in)/i`
+- `/\b(v?\d+\.\d+(\.\d+)?)\s*(released|available|now ga|is out)\b/i`
+- `/\brelease\s+v?\d+\.\d+/i`
+- `/\b(patch|hotfix|bugfix)\s+release\b/i`
+- `/^(version\s+\d+|tag\s+v?\d+)/i`
+- `/\bgithub\.com\/.+\/releases\//i` (link-based reject)
 
-**2. Switch from blog landing pages to richer discovery sources**
+Apply this filter inside `extractArticlesFromMarkdown` alongside `EXCLUDE_PATTERNS`.
 
-Replace/augment the sticky landing pages with sources that change daily:
+**3. Strengthen "analytical signal" scoring**
+In `computeSignalScore`, add a dedicated **analysis boost** (+3 each, max once) for these phrases that indicate a strategic/analytical post rather than a release announcement:
+- `lessons learned`, `deep dive`, `under the hood`, `how we`, `why we`, `case study`, `benchmark results`, `architecture`, `design`, `comparison`, `vs`, `tradeoff`, `best practices`, `pattern`, `strategy`, `analysis`, `insights`, `inside`, `evolution`, `journey`
 
-| Source | Old | New |
-|---|---|---|
-| Databricks | `/blog` | `/blog` + `/blog/category/engineering` |
-| Azure | `/en-us/blog/` | `/en-us/blog/category/analytics/` |
-| AWS | `/blogs/big-data/` | `/blogs/big-data/feed/` (RSS-style, date-ordered) |
-| GCP | `/blog/products/data-analytics` | + `/blog/products/data-analytics/rss` |
-| Iceberg | `/blogs/` | + GitHub releases `https://github.com/apache/iceberg/releases` |
-| Delta Lake | (new) | `https://delta.io/blog/` |
-| Spark | (new) | `https://spark.apache.org/news/` |
+And **penalize** (-4) titles that look like release dumps:
+- `release notes`, `changelog`, `version `, `now generally available` (the bare phrase, when unaccompanied by analysis terms), `is now available`
 
-**3. Extract and respect article publication dates**
-- Parse dates from the markdown (most blog cards include "Apr 19, 2026" or ISO dates).
-- Reject articles older than **14 days**.
-- Add a `+2` recency boost for articles published in the last 3 days.
+**4. Require minimum content depth**
+- Raise minimum summary length from 30 → 80 chars (release notes typically have very short stub summaries like "Iceberg 1.5.0 released").
+- If `summary.length < 80` AND no analysis keyword present → skip article.
 
-**4. Increase scrape frequency**
-- Change cron from `0 6 * * *` (once daily 6 AM UTC) to `0 */6 * * *` (every 6 hours).
-- Each run still saves a single per-day snapshot (UPSERT on date), so the latest run wins.
+**5. Lift minimum signal threshold**
+- Raise the per-article cutoff from `signalScore < 3` to `signalScore < 6` so only well-scored analytical posts make it through.
 
-**5. Diversify final selection (anti-clustering)**
-- After dedup, before slicing top 10: enforce **max 3 articles per source** so one chatty vendor doesn't crowd out fresher items from others.
+**6. Update AI summarization prompt**
+Tighten the rule line:
+> "Rules: focus on **analytical posts with strategic takeaways** (architecture decisions, performance analyses, case studies, comparisons). **Skip pure release notes, version announcements, and changelogs.** Cluster similar updates."
 
-**6. Lower Firecrawl cache**
-- Drop `maxAge` from 1 hour → 15 minutes for the more frequent runs.
+This nudges the AI to deprioritize anything release-flavored that slipped through.
 
-**7. Persist article links in snapshot for #1 to work**
-- Extend `spark_daily_snapshots.summary` JSON to include an `article_links: string[]` field (no schema change needed — it's `jsonb`).
-
-## Files touched
-
-- `supabase/functions/spark-scrape/index.ts` — sources list, date extraction + filtering, freshness scoring against recent snapshots, per-source cap, lower cache TTL, store `article_links`.
-- `supabase/migrations/<new>.sql` — update `cron.job` schedule from daily → every 6 hours.
+**7. Trigger a fresh scrape after deploy**
+Call the deployed `spark-scrape` function once to immediately repopulate today's snapshot with the stricter filters, so the user sees the change without waiting for the next cron run.
 
 ## What stays the same
 
-- UI layout (Home / News / Trends pages — no changes).
-- Database schema (only JSON contents grow).
-- AI summarization model and prompt structure.
-- Fallback-to-previous-snapshot behavior.
-- React Query 30-min `staleTime` on the client (so users still see consistent data within a session).
+- UI (Home / News / Trends layout).
+- Database schema and snapshot structure.
+- Cron schedule (every 6 hours).
+- Freshness memory, per-source cap, deduplication logic.
+- AI model (`google/gemini-2.5-flash-lite`).
 
 ## Expected outcome
 
-- Within 24h of deploy, Home page highlights and News feed should rotate as new posts appear on vendor blogs.
-- Same hero post won't reappear for 3 days unless it genuinely is the only signal.
-- Cron runs 4×/day so a fresh Databricks/AWS post lands in the feed within 6 hours, not 24.
+- News feed shows posts like "Lessons from migrating to Iceberg", "Deep dive: Photon vectorization", "Why we moved Delta to S3 Express" — not "Iceberg 1.5.2 released" or "Spark 4.0.1 now available".
+- GitHub release pages no longer scraped.
+- If a vendor only publishes release notes on a given day, those slots stay empty rather than filling with low-value items (per-source cap already prevents over-rotation to a single noisy vendor).
 
