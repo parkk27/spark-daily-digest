@@ -199,7 +199,7 @@ function extractArticlesFromMarkdown(
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
 
     if (isNoise(title, summary)) continue;
-    if (sourceName === 'aws' && !isRelevantForAws(title, summary)) continue;
+    if ((sourceName === 'aws' || sourceName === 'dataproc') && !isRelevantForAws(title, summary)) continue;
     if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
 
     const tags = extractTags(`${title} ${summary}`);
