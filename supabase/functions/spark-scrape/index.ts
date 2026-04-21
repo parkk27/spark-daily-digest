@@ -298,8 +298,8 @@ function extractArticlesFromMarkdown(
     if (isReleaseNote(title, summary, link)) continue;
 
     const hasAnalysis = hasAnalysisSignal(title, summary);
-    // Require depth: short stub summaries are usually release announcements.
-    if (summary.length < 80 && !hasAnalysis) continue;
+    // Require minimal depth: extreme stubs are usually navigation crumbs.
+    if (summary.length < 40 && !hasAnalysis) continue;
 
     // Date extraction + freshness filter
     const publishedAt = extractPublishedDate(section);
