@@ -2,61 +2,51 @@
 
 ## Goal
 
-Filter the feed to favor **analytical blog posts** (with insights, strategic takeaways, deep-dives) and **drop release-note style sources** (GitHub releases, changelogs, version dumps).
+The News feed currently only shows 2 articles because the strict analytical filters in the scrape pipeline are too aggressive. The user wants to see **more variety on the News page** while keeping the curated, analytical highlights on the Home page.
 
-## Changes — `supabase/functions/spark-scrape/index.ts`
+## Approach
 
-**1. Remove pure release-note sources from `SOURCES`**
-- Remove `iceberg-releases` → `https://github.com/apache/iceberg/releases` (raw version tags, no analysis)
-- Remove `dataproc` → `https://cloud.google.com/dataproc/docs/release-notes` (changelog format)
-- Replace `spark` news feed (`/news/`, mostly version announcements) with `https://www.databricks.com/blog/category/open-source` for Spark-ecosystem analysis. Optional: keep `spark` only if filtered to non-release items.
-- Keep all analytical blogs: Databricks, Databricks Engineering, Azure Analytics, AWS Big Data feed, Iceberg blogs, Delta blog, GCP data-analytics.
+Decouple the **News feed** (broad, varied) from the **Home page highlights** (strict, analytical). The Home page keeps the high-bar curation; the News page shows everything we managed to ingest.
 
-**2. Add a "release-note" rejection filter** (new `RELEASE_NOTE_PATTERNS`)
-Reject any article whose title/summary matches:
-- `/^(release notes?|changelog|what.?s new in)/i`
-- `/\b(v?\d+\.\d+(\.\d+)?)\s*(released|available|now ga|is out)\b/i`
-- `/\brelease\s+v?\d+\.\d+/i`
-- `/\b(patch|hotfix|bugfix)\s+release\b/i`
-- `/^(version\s+\d+|tag\s+v?\d+)/i`
-- `/\bgithub\.com\/.+\/releases\//i` (link-based reject)
+## Changes
 
-Apply this filter inside `extractArticlesFromMarkdown` alongside `EXCLUDE_PATTERNS`.
+### 1. `supabase/functions/spark-scrape/index.ts`
 
-**3. Strengthen "analytical signal" scoring**
-In `computeSignalScore`, add a dedicated **analysis boost** (+3 each, max once) for these phrases that indicate a strategic/analytical post rather than a release announcement:
-- `lessons learned`, `deep dive`, `under the hood`, `how we`, `why we`, `case study`, `benchmark results`, `architecture`, `design`, `comparison`, `vs`, `tradeoff`, `best practices`, `pattern`, `strategy`, `analysis`, `insights`, `inside`, `evolution`, `journey`
+Split the pipeline into two tiers stored in the same snapshot:
 
-And **penalize** (-4) titles that look like release dumps:
-- `release notes`, `changelog`, `version `, `now generally available` (the bare phrase, when unaccompanied by analysis terms), `is now available`
+- **`articles`** (existing field) — stays strict (signalScore ≥ 6, analytical only). Powers the Home page highlights and the daily AI summary.
+- **`all_articles`** (new field in snapshot JSON) — relaxed tier (signalScore ≥ 3, no 80-char summary requirement, release-note rejection still applies). Up to ~30 items, deduped, with per-source cap raised from 3 → 5.
 
-**4. Require minimum content depth**
-- Raise minimum summary length from 30 → 80 chars (release notes typically have very short stub summaries like "Iceberg 1.5.0 released").
-- If `summary.length < 80` AND no analysis keyword present → skip article.
+Both tiers come from the same scrape pass — no extra Firecrawl calls. We just keep two filtered views of the same fetched articles.
 
-**5. Lift minimum signal threshold**
-- Raise the per-article cutoff from `signalScore < 3` to `signalScore < 6` so only well-scored analytical posts make it through.
+Persistence: extend the `summary` JSONB to include `all_articles: Article[]` alongside the existing fields. No schema migration needed.
 
-**6. Update AI summarization prompt**
-Tighten the rule line:
-> "Rules: focus on **analytical posts with strategic takeaways** (architecture decisions, performance analyses, case studies, comparisons). **Skip pure release notes, version announcements, and changelogs.** Cluster similar updates."
+### 2. `src/hooks/useSparkData.ts`
 
-This nudges the AI to deprioritize anything release-flavored that slipped through.
+Extend `SparkData` to expose both tiers:
+- `articles` (strict, for Home)
+- `allArticles` (relaxed, for News)
 
-**7. Trigger a fresh scrape after deploy**
-Call the deployed `spark-scrape` function once to immediately repopulate today's snapshot with the stricter filters, so the user sees the change without waiting for the next cron run.
+Read `all_articles` from the edge function response, falling back to `articles` if older snapshots don't have the new field.
+
+### 3. `src/pages/NewsPage.tsx`
+
+Switch from `data.articles` → `data.allArticles`. Same UI, same grouping by date, same source badges — just a richer dataset.
+
+### 4. Trigger a fresh scrape
+
+Run `spark-scrape` once after deploy so today's snapshot includes the new `all_articles` field. Until that runs, the News page falls back to the strict list (no breakage).
 
 ## What stays the same
 
-- UI (Home / News / Trends layout).
-- Database schema and snapshot structure.
-- Cron schedule (every 6 hours).
-- Freshness memory, per-source cap, deduplication logic.
-- AI model (`google/gemini-2.5-flash-lite`).
+- Home page (`HomePage.tsx`) and Trends page — unchanged, still backed by the curated `articles` list and AI summary.
+- Database schema — only the JSON contents grow.
+- Cron schedule, freshness memory, dedup, AI prompt, Firecrawl settings — unchanged.
+- Release-note rejection (GitHub releases, changelogs, version dumps) still applies to **both** tiers.
 
 ## Expected outcome
 
-- News feed shows posts like "Lessons from migrating to Iceberg", "Deep dive: Photon vectorization", "Why we moved Delta to S3 Express" — not "Iceberg 1.5.2 released" or "Spark 4.0.1 now available".
-- GitHub release pages no longer scraped.
-- If a vendor only publishes release notes on a given day, those slots stay empty rather than filling with low-value items (per-source cap already prevents over-rotation to a single noisy vendor).
+- News page shows 15–25 articles per day across all vendors (Databricks, AWS, Azure, GCP, Iceberg, Delta, etc.) instead of 2.
+- Home page highlights stay tight and analytical.
+- No release-note pollution on either page.
 
