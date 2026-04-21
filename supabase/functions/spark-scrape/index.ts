@@ -14,12 +14,18 @@ interface PipelineMetrics {
 }
 
 // ── Source Configuration ──
+// Mix of landing pages + date-ordered feeds/category pages so the scraper sees
+// fresh content as vendors publish, not just sticky "featured" hero posts.
 const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
+  { name: 'databricks-eng', url: 'https://www.databricks.com/blog/category/engineering', weight: 1.0 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
-  { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/', weight: 0.9 },
-  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.9 },
+  { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/category/analytics/', weight: 0.9 },
+  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/feed/', weight: 0.9 },
   { name: 'iceberg', url: 'https://iceberg.apache.org/blogs/', weight: 0.95 },
+  { name: 'iceberg-releases', url: 'https://github.com/apache/iceberg/releases', weight: 1.0 },
+  { name: 'delta', url: 'https://delta.io/blog/', weight: 0.95 },
+  { name: 'spark', url: 'https://spark.apache.org/news/', weight: 1.0 },
   { name: 'dataproc', url: 'https://cloud.google.com/dataproc/docs/release-notes', weight: 0.85 },
 ];
 
@@ -90,13 +96,24 @@ const LOW_SIGNAL_PATTERNS = [
 
 interface ScrapedArticle {
   title: string;
-  source: string;
+  source: string;        // display source (rolled-up vendor name)
+  rawSource: string;     // original feed name (for cap counting)
   summary: string;
   link: string;
   tags: string[];
   date: string;
+  publishedAt?: string;  // ISO date if extractable from markdown
+  ageDays?: number;
   weight: number;
   signalScore: number;
+}
+
+// Roll up multiple feeds from same vendor for display + per-source diversity caps
+function displaySource(rawSource: string): string {
+  if (rawSource.startsWith('databricks')) return 'databricks';
+  if (rawSource.startsWith('iceberg')) return 'iceberg';
+  if (rawSource === 'dataproc') return 'google';
+  return rawSource;
 }
 
 function isRelevantForAws(title: string, summary: string): boolean {
@@ -127,6 +144,44 @@ function computeSignalScore(title: string, summary: string, sourceWeight: number
   if (title.length < 15) score -= 2;
   if (summary.length < 30) score -= 1;
   return Math.max(0, score);
+}
+
+// ── Date extraction ──
+// Vendor blog cards usually contain a publication date near the title.
+// Supported formats: "Apr 19, 2026", "April 19, 2026", "2026-04-19", "19 Apr 2026".
+const MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+function extractPublishedDate(section: string): string | undefined {
+  // ISO: 2026-04-19
+  const iso = section.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  // "Apr 19, 2026" or "April 19, 2026"
+  const us = section.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(20\d{2})\b/i);
+  if (us) {
+    const m = MONTHS[us[1].toLowerCase().slice(0, 3)];
+    const d = new Date(Date.UTC(parseInt(us[3]), m, parseInt(us[2])));
+    return d.toISOString().split('T')[0];
+  }
+
+  // "19 Apr 2026"
+  const eu = section.match(/\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(20\d{2})\b/i);
+  if (eu) {
+    const m = MONTHS[eu[2].toLowerCase().slice(0, 3)];
+    const d = new Date(Date.UTC(parseInt(eu[3]), m, parseInt(eu[1])));
+    return d.toISOString().split('T')[0];
+  }
+
+  return undefined;
+}
+
+function ageInDays(isoDate: string): number {
+  const then = new Date(`${isoDate}T00:00:00Z`).getTime();
+  const now = Date.now();
+  return Math.max(0, Math.floor((now - then) / 86400000));
 }
 
 // ── Deduplication ──
@@ -174,14 +229,18 @@ function cleanSummaryText(text: string): string {
 }
 
 // ── Markdown Extraction ──
+const MAX_ARTICLE_AGE_DAYS = 14;
+
 function extractArticlesFromMarkdown(
   markdown: string, sourceName: string, sourceUrl: string, sourceWeight: number
 ): ScrapedArticle[] {
   const articles: ScrapedArticle[] = [];
   const today = new Date().toISOString().split('T')[0];
   const sections = markdown.split(/\n#{1,3}\s+/).filter(Boolean);
+  const display = displaySource(sourceName);
 
-  for (const section of sections.slice(0, 8)) {
+  // Take more candidate sections — we'll filter aggressively by date + signal.
+  for (const section of sections.slice(0, 20)) {
     const lines = section.trim().split('\n').filter(Boolean);
     if (lines.length === 0) continue;
 
@@ -199,14 +258,34 @@ function extractArticlesFromMarkdown(
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
 
     if (isNoise(title, summary)) continue;
+    // AWS feed and Dataproc release notes are noisy — only keep big-data-relevant items.
     if ((sourceName === 'aws' || sourceName === 'dataproc') && !isRelevantForAws(title, summary)) continue;
     if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
 
+    // Date extraction + freshness filter
+    const publishedAt = extractPublishedDate(section);
+    const age = publishedAt ? ageInDays(publishedAt) : undefined;
+    if (age !== undefined && age > MAX_ARTICLE_AGE_DAYS) continue;
+
     const tags = extractTags(`${title} ${summary}`);
-    const signalScore = computeSignalScore(title, summary, sourceWeight);
+    let signalScore = computeSignalScore(title, summary, sourceWeight);
+    // Recency boost: very fresh posts (<= 3 days) get a small bump.
+    if (age !== undefined && age <= 3) signalScore += 2;
     if (signalScore < 3) continue;
 
-    articles.push({ title, source: sourceName, summary, link, tags, date: today, weight: sourceWeight, signalScore });
+    articles.push({
+      title,
+      source: display,
+      rawSource: sourceName,
+      summary,
+      link,
+      tags,
+      date: today,
+      publishedAt,
+      ageDays: age,
+      weight: sourceWeight,
+      signalScore,
+    });
   }
 
   return articles;
@@ -364,6 +443,36 @@ async function loadPreviousSnapshot(): Promise<{
   } catch { return undefined; }
 }
 
+// Load article links seen in the last N days, mapped to days-ago.
+// Used to boost unseen articles and penalise recently-shown ones.
+async function loadRecentArticleLinks(days: number): Promise<Map<string, number>> {
+  const seen = new Map<string, number>();
+  const sb = getSupabaseClient();
+  if (!sb) return seen;
+  try {
+    const resp = await fetch(
+      `${sb.url}/rest/v1/spark_daily_snapshots?order=date.desc&limit=${days}&select=date,summary`,
+      { headers: { 'apikey': sb.key, 'Authorization': `Bearer ${sb.key}` } }
+    );
+    if (!resp.ok) return seen;
+    const rows = await resp.json() as Array<{ date: string; summary: { article_links?: string[] } | null }>;
+    const today = new Date();
+    for (const row of rows) {
+      const links = row.summary?.article_links;
+      if (!Array.isArray(links)) continue;
+      const rowDate = new Date(`${row.date}T00:00:00Z`);
+      const daysAgo = Math.max(0, Math.floor((today.getTime() - rowDate.getTime()) / 86400000));
+      for (const link of links) {
+        const prev = seen.get(link);
+        if (prev === undefined || daysAgo < prev) seen.set(link, daysAgo);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load recent article links:', err);
+  }
+  return seen;
+}
+
 async function saveSnapshot(date: string, tagCounts: Record<string, number>, articleCount: number, summary: Record<string, unknown>) {
   const sb = getSupabaseClient();
   if (!sb) return;
@@ -406,7 +515,8 @@ Deno.serve(async (req) => {
 
     console.log('Starting big data ecosystem scrape...');
 
-    // Step 1: Ingest — fetch from all sources in parallel
+    // Step 1: Ingest — fetch from all sources in parallel.
+    // Lower cache TTL since cron now runs every 6 hours.
     const scrapePromises = SOURCES.map(async (source) => {
       try {
         console.log(`Scraping ${source.name}: ${source.url}`);
@@ -417,7 +527,7 @@ Deno.serve(async (req) => {
             url: source.url,
             formats: ['markdown'],
             onlyMainContent: true,
-            maxAge: 3600000, // Re-scrape if cache > 1 hour (ensures freshness)
+            maxAge: 900000, // 15 min — fresher pulls between cron runs
           }),
         });
         if (!response.ok) {
@@ -433,14 +543,16 @@ Deno.serve(async (req) => {
       }
     });
 
-    const results = await Promise.all(scrapePromises);
+    // Run scrape + history lookups in parallel — they don't depend on each other.
+    const [results, previousSnapshot, recentLinks] = await Promise.all([
+      Promise.all(scrapePromises),
+      loadPreviousSnapshot(),
+      loadRecentArticleLinks(7),
+    ]);
     let allArticles = results.flat();
     metrics.articles_fetched = allArticles.length;
 
-    console.log(`Scraped ${allArticles.length} raw articles`);
-
-    // Load previous snapshot (needed for trends AND fallback)
-    const previousSnapshot = await loadPreviousSnapshot();
+    console.log(`Scraped ${allArticles.length} raw articles (recent-link memory: ${recentLinks.size})`);
 
     // Step 2-5: Filter, Deduplicate, Tag, Sort
     if (allArticles.length === 0) {
@@ -488,10 +600,33 @@ Deno.serve(async (req) => {
     const { result: dedupedArticles, removed } = deduplicateArticles(allArticles);
     metrics.duplicates_removed = removed;
 
-    // Sort by signal score, cap at 10
-    const finalArticles = dedupedArticles
-      .sort((a, b) => b.signalScore - a.signalScore)
-      .slice(0, 10);
+    // ── Freshness scoring against recent snapshots ──
+    // Boost links we've never shown (+4); penalise links shown in last 3 days (-3).
+    // This forces the feed to rotate even when vendor landing pages are sticky.
+    for (const a of dedupedArticles) {
+      const seenDaysAgo = recentLinks.get(a.link);
+      if (seenDaysAgo === undefined) {
+        a.signalScore += 4;
+      } else if (seenDaysAgo <= 3) {
+        a.signalScore -= 3;
+      }
+    }
+
+    // Sort by adjusted signal score
+    const sorted = dedupedArticles.sort((a, b) => b.signalScore - a.signalScore);
+
+    // ── Anti-clustering: max 3 articles per vendor (rolled-up source) ──
+    // Prevents one chatty blog from crowding out fresher items elsewhere.
+    const PER_SOURCE_CAP = 3;
+    const perSource = new Map<string, number>();
+    const finalArticles: ScrapedArticle[] = [];
+    for (const a of sorted) {
+      const used = perSource.get(a.source) ?? 0;
+      if (used >= PER_SOURCE_CAP) continue;
+      finalArticles.push(a);
+      perSource.set(a.source, used + 1);
+      if (finalArticles.length >= 10) break;
+    }
     metrics.articles_after_filter = finalArticles.length;
 
     // Step 6: Trend detection
@@ -499,19 +634,23 @@ Deno.serve(async (req) => {
 
     // Step 7: AI Summarization
     const aiSummary = await aiSummarize(finalArticles);
-    const summary = aiSummary || fallbackSummary(finalArticles);
+    const baseSummary = aiSummary || fallbackSummary(finalArticles);
     metrics.summary_generated = !!aiSummary;
 
-    // Step 8: Save snapshot
+    // Step 8: Save snapshot — include article_links so future runs have freshness memory.
     const today = new Date().toISOString().split('T')[0];
     const tagCounts: Record<string, number> = {};
     for (const a of finalArticles) {
       for (const t of a.tags) { tagCounts[t] = (tagCounts[t] || 0) + 1; }
     }
+    const summary = {
+      ...baseSummary,
+      article_links: finalArticles.map((a) => a.link),
+    };
     await saveSnapshot(today, tagCounts, finalArticles.length, summary);
 
-    // Clean response (remove internal fields)
-    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, ...rest }) => rest);
+    // Clean response (strip internal scoring fields and rawSource)
+    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
     metrics.processing_time_ms = Date.now() - startTime;
 
     console.log(`Returning ${cleanArticles.length} articles, ${trends.length} trends | metrics: fetched=${metrics.articles_fetched} filtered=${metrics.articles_after_filter} deduped=${metrics.duplicates_removed} ai=${metrics.summary_generated}`);
