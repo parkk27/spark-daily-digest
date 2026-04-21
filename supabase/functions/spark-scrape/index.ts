@@ -291,9 +291,15 @@ function extractArticlesFromMarkdown(
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
 
     if (isNoise(title, summary)) continue;
-    // AWS feed and Dataproc release notes are noisy — only keep big-data-relevant items.
-    if ((sourceName === 'aws' || sourceName === 'dataproc') && !isRelevantForAws(title, summary)) continue;
+    // AWS feed is noisy — only keep big-data-relevant items.
+    if (sourceName === 'aws' && !isRelevantForAws(title, summary)) continue;
     if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
+    // Drop release notes / changelogs / version dumps — keep analysis only.
+    if (isReleaseNote(title, summary, link)) continue;
+
+    const hasAnalysis = hasAnalysisSignal(title, summary);
+    // Require depth: short stub summaries are usually release announcements.
+    if (summary.length < 80 && !hasAnalysis) continue;
 
     // Date extraction + freshness filter
     const publishedAt = extractPublishedDate(section);
@@ -304,7 +310,8 @@ function extractArticlesFromMarkdown(
     let signalScore = computeSignalScore(title, summary, sourceWeight);
     // Recency boost: very fresh posts (<= 3 days) get a small bump.
     if (age !== undefined && age <= 3) signalScore += 2;
-    if (signalScore < 3) continue;
+    // Higher cutoff — only well-scored analytical posts make it through.
+    if (signalScore < 6) continue;
 
     articles.push({
       title,
