@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
 
       if (previousSnapshot?.summary) {
         const today = new Date().toISOString().split('T')[0];
-        const prevSummary = previousSnapshot.summary as { topInsight?: string; highlights?: string[]; trends?: string[]; impact?: string[] };
+        const prevSummary = previousSnapshot.summary as { topInsight?: string; highlights?: string[]; trends?: string[]; impact?: string[]; all_articles?: unknown[] };
         metrics.processing_time_ms = Date.now() - startTime;
 
         return new Response(JSON.stringify({
@@ -612,6 +612,7 @@ Deno.serve(async (req) => {
             date: previousSnapshot.date || today,
             summary: prevSummary,
             articles: [],
+            all_articles: Array.isArray(prevSummary.all_articles) ? prevSummary.all_articles : [],
             trends: deriveTrends([], previousSnapshot.tag_counts as Record<string, number>),
           },
           metrics,
