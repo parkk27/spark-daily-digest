@@ -28,7 +28,9 @@ const NewsPage = () => {
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No articles available. Try refreshing.</p>
+        <p className="text-sm text-muted-foreground">
+          No fresh articles in the last 10 days. The next scrape runs every 6 hours.
+        </p>
       ) : (
         <div className="space-y-8">
           {sortedDates.map((date, di) => (

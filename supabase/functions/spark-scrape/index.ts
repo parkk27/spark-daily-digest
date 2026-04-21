@@ -298,8 +298,8 @@ function extractArticlesFromMarkdown(
     if (isReleaseNote(title, summary, link)) continue;
 
     const hasAnalysis = hasAnalysisSignal(title, summary);
-    // Require depth: short stub summaries are usually release announcements.
-    if (summary.length < 80 && !hasAnalysis) continue;
+    // Require minimal depth: extreme stubs are usually navigation crumbs.
+    if (summary.length < 40 && !hasAnalysis) continue;
 
     // Date extraction + freshness filter
     const publishedAt = extractPublishedDate(section);
@@ -310,9 +310,8 @@ function extractArticlesFromMarkdown(
     let signalScore = computeSignalScore(title, summary, sourceWeight);
     // Recency boost: very fresh posts (<= 3 days) get a small bump.
     if (age !== undefined && age <= 3) signalScore += 2;
-    // Relaxed gate — keeps a broad set for the News feed.
-    // Strict tier (signalScore >= 6) is filtered out later for Home highlights.
-    if (signalScore < 3) continue;
+    // No score gate at extraction — Tier B (News) accepts anything that
+    // passed noise/release/exclude/age filters. Tier A (Home) gates on >= 6 later.
 
     articles.push({
       title,
@@ -514,6 +513,38 @@ async function loadRecentArticleLinks(days: number): Promise<Map<string, number>
   return seen;
 }
 
+// Load `all_articles` from the last N days of snapshots for News-feed backfill.
+// Returns articles with their original dates preserved; tolerates old-shape rows.
+async function loadHistoricalNewsArticles(days: number): Promise<Array<Record<string, unknown> & { link?: string; date?: string }>> {
+  const sb = getSupabaseClient();
+  if (!sb) return [];
+  try {
+    const resp = await fetch(
+      `${sb.url}/rest/v1/spark_daily_snapshots?order=date.desc&limit=${days}&select=date,summary`,
+      { headers: { 'apikey': sb.key, 'Authorization': `Bearer ${sb.key}` } }
+    );
+    if (!resp.ok) return [];
+    const rows = await resp.json() as Array<{ date: string; summary: { all_articles?: unknown[] } | null }>;
+    const out: Array<Record<string, unknown>> = [];
+    for (const row of rows) {
+      const items = row.summary?.all_articles;
+      if (!Array.isArray(items)) continue;
+      for (const item of items) {
+        if (item && typeof item === 'object') {
+          const obj = item as Record<string, unknown>;
+          // Preserve original date if present, else stamp with the snapshot date.
+          if (!obj.date) obj.date = row.date;
+          out.push(obj);
+        }
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error('Failed to load historical news articles:', err);
+    return [];
+  }
+}
+
 async function saveSnapshot(date: string, tagCounts: Record<string, number>, articleCount: number, summary: Record<string, unknown>) {
   const sb = getSupabaseClient();
   if (!sb) return;
@@ -643,28 +674,32 @@ Deno.serve(async (req) => {
     const { result: dedupedArticles, removed } = deduplicateArticles(allArticles);
     metrics.duplicates_removed = removed;
 
-    // ── Freshness scoring against recent snapshots ──
+    // ── Freshness scoring: strict-tier ranking only ──
     // Boost links we've never shown (+4); penalise links shown in last 3 days (-3).
-    // This forces the feed to rotate even when vendor landing pages are sticky.
+    // We compute an adjusted score for the Home/AI tier so it rotates each run.
+    // The News tier intentionally ignores this so older-but-still-valid links
+    // remain visible and the feed never collapses to zero.
+    const adjustedScore = new Map<ScrapedArticle, number>();
     for (const a of dedupedArticles) {
       const seenDaysAgo = recentLinks.get(a.link);
-      if (seenDaysAgo === undefined) {
-        a.signalScore += 4;
-      } else if (seenDaysAgo <= 3) {
-        a.signalScore -= 3;
-      }
+      let s = a.signalScore;
+      if (seenDaysAgo === undefined) s += 4;
+      else if (seenDaysAgo <= 3) s -= 3;
+      adjustedScore.set(a, s);
     }
 
-    // Sort by adjusted signal score
-    const sorted = dedupedArticles.sort((a, b) => b.signalScore - a.signalScore);
+    // Sort by adjusted score for strict tier
+    const sortedStrict = [...dedupedArticles].sort(
+      (a, b) => (adjustedScore.get(b) ?? 0) - (adjustedScore.get(a) ?? 0)
+    );
 
     // ── Tier A: Strict highlights (Home page + AI summary) ──
-    // signalScore >= 6, max 3 per vendor, top 10.
+    // adjusted signalScore >= 6, max 3 per vendor, top 10.
     const STRICT_CAP = 3;
     const strictPerSource = new Map<string, number>();
     const finalArticles: ScrapedArticle[] = [];
-    for (const a of sorted) {
-      if (a.signalScore < 6) continue;
+    for (const a of sortedStrict) {
+      if ((adjustedScore.get(a) ?? 0) < 6) continue;
       const used = strictPerSource.get(a.source) ?? 0;
       if (used >= STRICT_CAP) continue;
       finalArticles.push(a);
@@ -674,11 +709,12 @@ Deno.serve(async (req) => {
     metrics.articles_after_filter = finalArticles.length;
 
     // ── Tier B: Relaxed feed (News page) ──
-    // All deduped articles, max 5 per vendor, up to 30 items.
+    // Sort by raw signalScore (no recency penalty), max 5 per vendor, up to 30.
+    const sortedRelaxed = [...dedupedArticles].sort((a, b) => b.signalScore - a.signalScore);
     const RELAXED_CAP = 5;
     const relaxedPerSource = new Map<string, number>();
     const newsArticles: ScrapedArticle[] = [];
-    for (const a of sorted) {
+    for (const a of sortedRelaxed) {
       const used = relaxedPerSource.get(a.source) ?? 0;
       if (used >= RELAXED_CAP) continue;
       newsArticles.push(a);
@@ -701,7 +737,24 @@ Deno.serve(async (req) => {
       for (const t of a.tags) { tagCounts[t] = (tagCounts[t] || 0) + 1; }
     }
     const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
-    const cleanNewsArticles = newsArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
+    let cleanNewsArticles: Array<Record<string, unknown> & { link?: string; date?: string }> =
+      newsArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
+
+    // ── Backfill: if today's News tier is thin, pull from last 10 days ──
+    const todaysNewsCount = cleanNewsArticles.length;
+    if (cleanNewsArticles.length < 12) {
+      const historical = await loadHistoricalNewsArticles(10);
+      const seenLinks = new Set(cleanNewsArticles.map((a) => a.link).filter(Boolean) as string[]);
+      for (const item of historical) {
+        if (cleanNewsArticles.length >= 40) break;
+        const link = typeof item.link === 'string' ? item.link : undefined;
+        if (!link || seenLinks.has(link)) continue;
+        seenLinks.add(link);
+        cleanNewsArticles.push(item);
+      }
+      console.log(`News backfill: today=${todaysNewsCount}, after backfill=${cleanNewsArticles.length}`);
+    }
+
     const summary = {
       ...baseSummary,
       article_links: newsArticles.map((a) => a.link),
