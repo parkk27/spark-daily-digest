@@ -600,10 +600,33 @@ Deno.serve(async (req) => {
     const { result: dedupedArticles, removed } = deduplicateArticles(allArticles);
     metrics.duplicates_removed = removed;
 
-    // Sort by signal score, cap at 10
-    const finalArticles = dedupedArticles
-      .sort((a, b) => b.signalScore - a.signalScore)
-      .slice(0, 10);
+    // ── Freshness scoring against recent snapshots ──
+    // Boost links we've never shown (+4); penalise links shown in last 3 days (-3).
+    // This forces the feed to rotate even when vendor landing pages are sticky.
+    for (const a of dedupedArticles) {
+      const seenDaysAgo = recentLinks.get(a.link);
+      if (seenDaysAgo === undefined) {
+        a.signalScore += 4;
+      } else if (seenDaysAgo <= 3) {
+        a.signalScore -= 3;
+      }
+    }
+
+    // Sort by adjusted signal score
+    const sorted = dedupedArticles.sort((a, b) => b.signalScore - a.signalScore);
+
+    // ── Anti-clustering: max 3 articles per vendor (rolled-up source) ──
+    // Prevents one chatty blog from crowding out fresher items elsewhere.
+    const PER_SOURCE_CAP = 3;
+    const perSource = new Map<string, number>();
+    const finalArticles: ScrapedArticle[] = [];
+    for (const a of sorted) {
+      const used = perSource.get(a.source) ?? 0;
+      if (used >= PER_SOURCE_CAP) continue;
+      finalArticles.push(a);
+      perSource.set(a.source, used + 1);
+      if (finalArticles.length >= 10) break;
+    }
     metrics.articles_after_filter = finalArticles.length;
 
     // Step 6: Trend detection
@@ -611,19 +634,23 @@ Deno.serve(async (req) => {
 
     // Step 7: AI Summarization
     const aiSummary = await aiSummarize(finalArticles);
-    const summary = aiSummary || fallbackSummary(finalArticles);
+    const baseSummary = aiSummary || fallbackSummary(finalArticles);
     metrics.summary_generated = !!aiSummary;
 
-    // Step 8: Save snapshot
+    // Step 8: Save snapshot — include article_links so future runs have freshness memory.
     const today = new Date().toISOString().split('T')[0];
     const tagCounts: Record<string, number> = {};
     for (const a of finalArticles) {
       for (const t of a.tags) { tagCounts[t] = (tagCounts[t] || 0) + 1; }
     }
+    const summary = {
+      ...baseSummary,
+      article_links: finalArticles.map((a) => a.link),
+    };
     await saveSnapshot(today, tagCounts, finalArticles.length, summary);
 
-    // Clean response (remove internal fields)
-    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, ...rest }) => rest);
+    // Clean response (strip internal scoring fields and rawSource)
+    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
     metrics.processing_time_ms = Date.now() - startTime;
 
     console.log(`Returning ${cleanArticles.length} articles, ${trends.length} trends | metrics: fetched=${metrics.articles_fetched} filtered=${metrics.articles_after_filter} deduped=${metrics.duplicates_removed} ai=${metrics.summary_generated}`);
