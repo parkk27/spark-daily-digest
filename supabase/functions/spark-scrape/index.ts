@@ -356,7 +356,7 @@ ${articleText}
 JSON format:
 {"topInsight":"one sentence key takeaway","highlights":["max 5 high-signal items"],"trends":["3-4 cross-article patterns"],"impact":["max 3 strategic implications"]}
 
-Rules: cluster similar updates, skip tutorials/marketing, focus on product launches, perf improvements, architecture changes. Be concise.`;
+Rules: focus on analytical posts with strategic takeaways (architecture decisions, performance analyses, case studies, comparisons). Skip pure release notes, version announcements, and changelogs. Cluster similar updates. Be concise.`;
 
   try {
     const resp = await fetch(AI_GATEWAY_URL, {
