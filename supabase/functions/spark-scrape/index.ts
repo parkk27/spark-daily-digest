@@ -96,13 +96,24 @@ const LOW_SIGNAL_PATTERNS = [
 
 interface ScrapedArticle {
   title: string;
-  source: string;
+  source: string;        // display source (rolled-up vendor name)
+  rawSource: string;     // original feed name (for cap counting)
   summary: string;
   link: string;
   tags: string[];
   date: string;
+  publishedAt?: string;  // ISO date if extractable from markdown
+  ageDays?: number;
   weight: number;
   signalScore: number;
+}
+
+// Roll up multiple feeds from same vendor for display + per-source diversity caps
+function displaySource(rawSource: string): string {
+  if (rawSource.startsWith('databricks')) return 'databricks';
+  if (rawSource.startsWith('iceberg')) return 'iceberg';
+  if (rawSource === 'dataproc') return 'google';
+  return rawSource;
 }
 
 function isRelevantForAws(title: string, summary: string): boolean {
@@ -133,6 +144,44 @@ function computeSignalScore(title: string, summary: string, sourceWeight: number
   if (title.length < 15) score -= 2;
   if (summary.length < 30) score -= 1;
   return Math.max(0, score);
+}
+
+// ── Date extraction ──
+// Vendor blog cards usually contain a publication date near the title.
+// Supported formats: "Apr 19, 2026", "April 19, 2026", "2026-04-19", "19 Apr 2026".
+const MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+function extractPublishedDate(section: string): string | undefined {
+  // ISO: 2026-04-19
+  const iso = section.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  // "Apr 19, 2026" or "April 19, 2026"
+  const us = section.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(20\d{2})\b/i);
+  if (us) {
+    const m = MONTHS[us[1].toLowerCase().slice(0, 3)];
+    const d = new Date(Date.UTC(parseInt(us[3]), m, parseInt(us[2])));
+    return d.toISOString().split('T')[0];
+  }
+
+  // "19 Apr 2026"
+  const eu = section.match(/\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(20\d{2})\b/i);
+  if (eu) {
+    const m = MONTHS[eu[2].toLowerCase().slice(0, 3)];
+    const d = new Date(Date.UTC(parseInt(eu[3]), m, parseInt(eu[1])));
+    return d.toISOString().split('T')[0];
+  }
+
+  return undefined;
+}
+
+function ageInDays(isoDate: string): number {
+  const then = new Date(`${isoDate}T00:00:00Z`).getTime();
+  const now = Date.now();
+  return Math.max(0, Math.floor((now - then) / 86400000));
 }
 
 // ── Deduplication ──
