@@ -656,24 +656,38 @@ Deno.serve(async (req) => {
     // Sort by adjusted signal score
     const sorted = dedupedArticles.sort((a, b) => b.signalScore - a.signalScore);
 
-    // ── Anti-clustering: max 3 articles per vendor (rolled-up source) ──
-    // Prevents one chatty blog from crowding out fresher items elsewhere.
-    const PER_SOURCE_CAP = 3;
-    const perSource = new Map<string, number>();
+    // ── Tier A: Strict highlights (Home page + AI summary) ──
+    // signalScore >= 6, max 3 per vendor, top 10.
+    const STRICT_CAP = 3;
+    const strictPerSource = new Map<string, number>();
     const finalArticles: ScrapedArticle[] = [];
     for (const a of sorted) {
-      const used = perSource.get(a.source) ?? 0;
-      if (used >= PER_SOURCE_CAP) continue;
+      if (a.signalScore < 6) continue;
+      const used = strictPerSource.get(a.source) ?? 0;
+      if (used >= STRICT_CAP) continue;
       finalArticles.push(a);
-      perSource.set(a.source, used + 1);
+      strictPerSource.set(a.source, used + 1);
       if (finalArticles.length >= 10) break;
     }
     metrics.articles_after_filter = finalArticles.length;
 
+    // ── Tier B: Relaxed feed (News page) ──
+    // All deduped articles, max 5 per vendor, up to 30 items.
+    const RELAXED_CAP = 5;
+    const relaxedPerSource = new Map<string, number>();
+    const newsArticles: ScrapedArticle[] = [];
+    for (const a of sorted) {
+      const used = relaxedPerSource.get(a.source) ?? 0;
+      if (used >= RELAXED_CAP) continue;
+      newsArticles.push(a);
+      relaxedPerSource.set(a.source, used + 1);
+      if (newsArticles.length >= 30) break;
+    }
+
     // Step 6: Trend detection
     const trends = deriveTrends(finalArticles, previousSnapshot?.tag_counts as Record<string, number> | undefined);
 
-    // Step 7: AI Summarization
+    // Step 7: AI Summarization (uses strict tier only)
     const aiSummary = await aiSummarize(finalArticles);
     const baseSummary = aiSummary || fallbackSummary(finalArticles);
     metrics.summary_generated = !!aiSummary;
@@ -684,21 +698,22 @@ Deno.serve(async (req) => {
     for (const a of finalArticles) {
       for (const t of a.tags) { tagCounts[t] = (tagCounts[t] || 0) + 1; }
     }
+    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
+    const cleanNewsArticles = newsArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
     const summary = {
       ...baseSummary,
-      article_links: finalArticles.map((a) => a.link),
+      article_links: newsArticles.map((a) => a.link),
+      all_articles: cleanNewsArticles,
     };
     await saveSnapshot(today, tagCounts, finalArticles.length, summary);
 
-    // Clean response (strip internal scoring fields and rawSource)
-    const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
     metrics.processing_time_ms = Date.now() - startTime;
 
-    console.log(`Returning ${cleanArticles.length} articles, ${trends.length} trends | metrics: fetched=${metrics.articles_fetched} filtered=${metrics.articles_after_filter} deduped=${metrics.duplicates_removed} ai=${metrics.summary_generated}`);
+    console.log(`Returning ${cleanArticles.length} strict / ${cleanNewsArticles.length} news articles, ${trends.length} trends | metrics: fetched=${metrics.articles_fetched} filtered=${metrics.articles_after_filter} deduped=${metrics.duplicates_removed} ai=${metrics.summary_generated}`);
 
     return new Response(JSON.stringify({
       success: true,
-      data: { date: today, summary, articles: cleanArticles, trends },
+      data: { date: today, summary, articles: cleanArticles, all_articles: cleanNewsArticles, trends },
       metrics,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
