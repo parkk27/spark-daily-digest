@@ -18,7 +18,9 @@ const SOURCES = [
   { name: 'databricks', url: 'https://www.databricks.com/blog', weight: 1.0 },
   { name: 'google', url: 'https://cloud.google.com/blog/products/data-analytics', weight: 0.9 },
   { name: 'microsoft', url: 'https://azure.microsoft.com/en-us/blog/', weight: 0.9 },
-  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.85 },
+  { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/', weight: 0.9 },
+  { name: 'iceberg', url: 'https://iceberg.apache.org/blogs/', weight: 0.95 },
+  { name: 'dataproc', url: 'https://cloud.google.com/dataproc/docs/release-notes', weight: 0.85 },
 ];
 
 // ── Topic Tagging ──
