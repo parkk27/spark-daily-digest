@@ -737,7 +737,24 @@ Deno.serve(async (req) => {
       for (const t of a.tags) { tagCounts[t] = (tagCounts[t] || 0) + 1; }
     }
     const cleanArticles = finalArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
-    const cleanNewsArticles = newsArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
+    let cleanNewsArticles: Array<Record<string, unknown> & { link?: string; date?: string }> =
+      newsArticles.map(({ weight: _w, signalScore: _s, rawSource: _r, ...rest }) => rest);
+
+    // ── Backfill: if today's News tier is thin, pull from last 10 days ──
+    const todaysNewsCount = cleanNewsArticles.length;
+    if (cleanNewsArticles.length < 12) {
+      const historical = await loadHistoricalNewsArticles(10);
+      const seenLinks = new Set(cleanNewsArticles.map((a) => a.link).filter(Boolean) as string[]);
+      for (const item of historical) {
+        if (cleanNewsArticles.length >= 40) break;
+        const link = typeof item.link === 'string' ? item.link : undefined;
+        if (!link || seenLinks.has(link)) continue;
+        seenLinks.add(link);
+        cleanNewsArticles.push(item);
+      }
+      console.log(`News backfill: today=${todaysNewsCount}, after backfill=${cleanNewsArticles.length}`);
+    }
+
     const summary = {
       ...baseSummary,
       article_links: newsArticles.map((a) => a.link),
