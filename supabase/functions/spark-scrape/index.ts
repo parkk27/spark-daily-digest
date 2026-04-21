@@ -229,14 +229,18 @@ function cleanSummaryText(text: string): string {
 }
 
 // ── Markdown Extraction ──
+const MAX_ARTICLE_AGE_DAYS = 14;
+
 function extractArticlesFromMarkdown(
   markdown: string, sourceName: string, sourceUrl: string, sourceWeight: number
 ): ScrapedArticle[] {
   const articles: ScrapedArticle[] = [];
   const today = new Date().toISOString().split('T')[0];
   const sections = markdown.split(/\n#{1,3}\s+/).filter(Boolean);
+  const display = displaySource(sourceName);
 
-  for (const section of sections.slice(0, 8)) {
+  // Take more candidate sections — we'll filter aggressively by date + signal.
+  for (const section of sections.slice(0, 20)) {
     const lines = section.trim().split('\n').filter(Boolean);
     if (lines.length === 0) continue;
 
@@ -254,14 +258,34 @@ function extractArticlesFromMarkdown(
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
 
     if (isNoise(title, summary)) continue;
+    // AWS feed and Dataproc release notes are noisy — only keep big-data-relevant items.
     if ((sourceName === 'aws' || sourceName === 'dataproc') && !isRelevantForAws(title, summary)) continue;
     if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
 
+    // Date extraction + freshness filter
+    const publishedAt = extractPublishedDate(section);
+    const age = publishedAt ? ageInDays(publishedAt) : undefined;
+    if (age !== undefined && age > MAX_ARTICLE_AGE_DAYS) continue;
+
     const tags = extractTags(`${title} ${summary}`);
-    const signalScore = computeSignalScore(title, summary, sourceWeight);
+    let signalScore = computeSignalScore(title, summary, sourceWeight);
+    // Recency boost: very fresh posts (<= 3 days) get a small bump.
+    if (age !== undefined && age <= 3) signalScore += 2;
     if (signalScore < 3) continue;
 
-    articles.push({ title, source: sourceName, summary, link, tags, date: today, weight: sourceWeight, signalScore });
+    articles.push({
+      title,
+      source: display,
+      rawSource: sourceName,
+      summary,
+      link,
+      tags,
+      date: today,
+      publishedAt,
+      ageDays: age,
+      weight: sourceWeight,
+      signalScore,
+    });
   }
 
   return articles;
