@@ -413,7 +413,12 @@ Deno.serve(async (req) => {
         const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: source.url, formats: ['markdown'], onlyMainContent: true }),
+          body: JSON.stringify({
+            url: source.url,
+            formats: ['markdown'],
+            onlyMainContent: true,
+            maxAge: 3600000, // Re-scrape if cache > 1 hour (ensures freshness)
+          }),
         });
         if (!response.ok) {
           console.error(`Failed to scrape ${source.name}: ${response.status}`);
