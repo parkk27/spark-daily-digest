@@ -21,6 +21,7 @@ export interface PipelineMetrics {
 interface SparkData {
   dailySummary: DailySummary;
   articles: Article[];
+  allArticles: Article[];
   trends: TrendItem[];
   metrics?: PipelineMetrics;
 }
@@ -35,9 +36,15 @@ async function fetchSparkData(): Promise<SparkData> {
   }
 
   const d = data.data;
+  const articles: Article[] = d.articles ?? [];
+  // Relaxed tier for the News feed; fall back to strict list for older snapshots.
+  const allArticles: Article[] = Array.isArray(d.all_articles) && d.all_articles.length > 0
+    ? d.all_articles
+    : articles;
   return {
     dailySummary: { date: d.date, summary: d.summary },
-    articles: d.articles ?? [],
+    articles,
+    allArticles,
     trends: d.trends ?? [],
     metrics: data.metrics,
   };
@@ -53,6 +60,7 @@ export function useSparkData() {
     placeholderData: {
       dailySummary: mockSummary,
       articles: mockArticles,
+      allArticles: mockArticles,
       trends: mockTrends,
     },
   });
