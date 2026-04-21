@@ -110,8 +110,39 @@ interface ScrapedArticle {
 function displaySource(rawSource: string): string {
   if (rawSource.startsWith('databricks')) return 'databricks';
   if (rawSource.startsWith('iceberg')) return 'iceberg';
-  if (rawSource === 'dataproc') return 'google';
   return rawSource;
+}
+
+// ── Release-note rejection patterns ──
+// Strip out version dumps, changelogs, and bare "X.Y.Z released" announcements
+// so the feed favors analysis posts (deep dives, case studies, architecture).
+const RELEASE_NOTE_PATTERNS = [
+  /^(release notes?|changelog|what.?s new in)/i,
+  /\b(v?\d+\.\d+(\.\d+)?)\s*(released|available|now ga|is out)\b/i,
+  /\brelease\s+v?\d+\.\d+/i,
+  /\b(patch|hotfix|bugfix)\s+release\b/i,
+  /^(version\s+\d+|tag\s+v?\d+)/i,
+  /\bgithub\.com\/.+\/releases\//i,
+];
+
+// Analytical phrases — strong signal that a post offers strategic insight.
+const ANALYSIS_KEYWORDS = [
+  'lessons learned', 'deep dive', 'under the hood', 'how we', 'why we',
+  'case study', 'benchmark results', 'architecture', 'design', 'comparison',
+  ' vs ', 'tradeoff', 'best practices', 'pattern', 'strategy', 'analysis',
+  'insights', 'inside', 'evolution', 'journey',
+];
+
+function isReleaseNote(title: string, summary: string, link: string): boolean {
+  const hay = `${title} ${summary}`;
+  if (RELEASE_NOTE_PATTERNS.some((p) => p.test(hay))) return true;
+  if (/github\.com\/.+\/releases\//i.test(link)) return true;
+  return false;
+}
+
+function hasAnalysisSignal(title: string, summary: string): boolean {
+  const combined = `${title} ${summary}`.toLowerCase();
+  return ANALYSIS_KEYWORDS.some((kw) => combined.includes(kw));
 }
 
 function isRelevantForAws(title: string, summary: string): boolean {
