@@ -580,6 +580,9 @@ async function loadHistoricalNewsArticles(days: number): Promise<Array<Record<st
       for (const item of items) {
         if (item && typeof item === 'object') {
           const obj = item as Record<string, unknown>;
+          // Filter out legacy stored items pointing to category/landing/feed URLs.
+          const link = typeof obj.link === 'string' ? obj.link : undefined;
+          if (!isBlogPostLink(link, '')) continue;
           // Preserve original date if present, else stamp with the snapshot date.
           if (!obj.date) obj.date = row.date;
           out.push(obj);
