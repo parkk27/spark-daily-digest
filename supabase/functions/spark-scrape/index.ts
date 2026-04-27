@@ -133,6 +133,49 @@ const ANALYSIS_KEYWORDS = [
   'insights', 'inside', 'evolution', 'journey',
 ];
 
+// ── Link validation ──
+// Reject links that aren't actual blog posts: source landing pages,
+// category/tag/author/archive listings, feeds, and assets.
+const SOURCE_URLS = new Set([
+  'https://www.databricks.com/blog',
+  'https://www.databricks.com/blog/category/engineering',
+  'https://www.databricks.com/blog/category/open-source',
+  'https://cloud.google.com/blog/products/data-analytics',
+  'https://azure.microsoft.com/en-us/blog/category/analytics/',
+  'https://aws.amazon.com/blogs/big-data/feed/',
+  'https://iceberg.apache.org/blogs/',
+  'https://delta.io/blog/',
+]);
+
+const NON_POST_PATH_PATTERNS = [
+  /\/category\//i, /\/categories\//i,
+  /\/tag\//i, /\/tags\//i,
+  /\/author\//i, /\/authors\//i,
+  /\/page\/\d+/i, /\/archive\//i, /\/archives\//i,
+  /\/feed\/?$/i, /\/rss\/?$/i, /\.xml$/i, /\.rss$/i,
+];
+
+const ASSET_EXT_PATTERN = /\.(png|jpe?g|gif|svg|webp|mp4|webm|pdf|zip)(\?|#|$)/i;
+
+function isBlogPostLink(link: string | undefined, sourceUrl: string): boolean {
+  if (!link || typeof link !== 'string') return false;
+  const trimmed = link.trim();
+  if (!trimmed || trimmed.startsWith('#')) return false;
+  // Must be http(s)
+  if (!/^https?:\/\//i.test(trimmed)) return false;
+
+  // Strip trailing slash for landing-page comparison
+  const normalized = trimmed.replace(/\/+$/, '');
+  if (SOURCE_URLS.has(trimmed) || SOURCE_URLS.has(`${normalized}/`)) return false;
+  const sourceNormalized = sourceUrl.replace(/\/+$/, '');
+  if (normalized === sourceNormalized) return false;
+
+  if (ASSET_EXT_PATTERN.test(trimmed)) return false;
+  if (NON_POST_PATH_PATTERNS.some((p) => p.test(trimmed))) return false;
+
+  return true;
+}
+
 function isReleaseNote(title: string, summary: string, link: string): boolean {
   const hay = `${title} ${summary}`;
   if (RELEASE_NOTE_PATTERNS.some((p) => p.test(hay))) return true;
