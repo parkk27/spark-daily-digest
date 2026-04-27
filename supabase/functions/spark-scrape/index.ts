@@ -133,6 +133,49 @@ const ANALYSIS_KEYWORDS = [
   'insights', 'inside', 'evolution', 'journey',
 ];
 
+// ── Link validation ──
+// Reject links that aren't actual blog posts: source landing pages,
+// category/tag/author/archive listings, feeds, and assets.
+const SOURCE_URLS = new Set([
+  'https://www.databricks.com/blog',
+  'https://www.databricks.com/blog/category/engineering',
+  'https://www.databricks.com/blog/category/open-source',
+  'https://cloud.google.com/blog/products/data-analytics',
+  'https://azure.microsoft.com/en-us/blog/category/analytics/',
+  'https://aws.amazon.com/blogs/big-data/feed/',
+  'https://iceberg.apache.org/blogs/',
+  'https://delta.io/blog/',
+]);
+
+const NON_POST_PATH_PATTERNS = [
+  /\/category\//i, /\/categories\//i,
+  /\/tag\//i, /\/tags\//i,
+  /\/author\//i, /\/authors\//i,
+  /\/page\/\d+/i, /\/archive\//i, /\/archives\//i,
+  /\/feed\/?$/i, /\/rss\/?$/i, /\.xml$/i, /\.rss$/i,
+];
+
+const ASSET_EXT_PATTERN = /\.(png|jpe?g|gif|svg|webp|mp4|webm|pdf|zip)(\?|#|$)/i;
+
+function isBlogPostLink(link: string | undefined, sourceUrl: string): boolean {
+  if (!link || typeof link !== 'string') return false;
+  const trimmed = link.trim();
+  if (!trimmed || trimmed.startsWith('#')) return false;
+  // Must be http(s)
+  if (!/^https?:\/\//i.test(trimmed)) return false;
+
+  // Strip trailing slash for landing-page comparison
+  const normalized = trimmed.replace(/\/+$/, '');
+  if (SOURCE_URLS.has(trimmed) || SOURCE_URLS.has(`${normalized}/`)) return false;
+  const sourceNormalized = sourceUrl.replace(/\/+$/, '');
+  if (normalized === sourceNormalized) return false;
+
+  if (ASSET_EXT_PATTERN.test(trimmed)) return false;
+  if (NON_POST_PATH_PATTERNS.some((p) => p.test(trimmed))) return false;
+
+  return true;
+}
+
 function isReleaseNote(title: string, summary: string, link: string): boolean {
   const hay = `${title} ${summary}`;
   if (RELEASE_NOTE_PATTERNS.some((p) => p.test(hay))) return true;
@@ -280,12 +323,17 @@ function extractArticlesFromMarkdown(
     const title = cleanSummaryText(lines[0]).trim();
     if (title.length < 10 || title.length > 200) continue;
 
-    const linkMatch = section.match(/\[([^\]]*)\]\(([^)]+)\)/);
-    let link = linkMatch ? linkMatch[2] : sourceUrl;
-    if (link.startsWith('/')) {
-      const base = new URL(sourceUrl);
-      link = `${base.origin}${link}`;
+    // Pick the first markdown link in the section that looks like a real
+    // blog post URL — skip category/tag/author/feed/asset links and don't
+    // fall back to the source landing page (which sends the wrong signal).
+    const base = new URL(sourceUrl);
+    let link: string | undefined;
+    for (const m of section.matchAll(/\[([^\]]*)\]\(([^)]+)\)/g)) {
+      let candidate = m[2].trim();
+      if (candidate.startsWith('/')) candidate = `${base.origin}${candidate}`;
+      if (isBlogPostLink(candidate, sourceUrl)) { link = candidate; break; }
     }
+    if (!link) continue;
 
     const summaryRaw = lines.slice(1, 4).join(' ');
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
@@ -532,6 +580,9 @@ async function loadHistoricalNewsArticles(days: number): Promise<Array<Record<st
       for (const item of items) {
         if (item && typeof item === 'object') {
           const obj = item as Record<string, unknown>;
+          // Filter out legacy stored items pointing to category/landing/feed URLs.
+          const link = typeof obj.link === 'string' ? obj.link : undefined;
+          if (!isBlogPostLink(link, '')) continue;
           // Preserve original date if present, else stamp with the snapshot date.
           if (!obj.date) obj.date = row.date;
           out.push(obj);
@@ -643,7 +694,12 @@ Deno.serve(async (req) => {
             date: previousSnapshot.date || today,
             summary: prevSummary,
             articles: [],
-            all_articles: Array.isArray(prevSummary.all_articles) ? prevSummary.all_articles : [],
+            all_articles: Array.isArray(prevSummary.all_articles)
+              ? prevSummary.all_articles.filter((it) => {
+                  const link = (it as { link?: unknown })?.link;
+                  return isBlogPostLink(typeof link === 'string' ? link : undefined, '');
+                })
+              : [],
             trends: deriveTrends([], previousSnapshot.tag_counts as Record<string, number>),
           },
           metrics,
