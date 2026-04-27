@@ -323,12 +323,17 @@ function extractArticlesFromMarkdown(
     const title = cleanSummaryText(lines[0]).trim();
     if (title.length < 10 || title.length > 200) continue;
 
-    const linkMatch = section.match(/\[([^\]]*)\]\(([^)]+)\)/);
-    let link = linkMatch ? linkMatch[2] : sourceUrl;
-    if (link.startsWith('/')) {
-      const base = new URL(sourceUrl);
-      link = `${base.origin}${link}`;
+    // Pick the first markdown link in the section that looks like a real
+    // blog post URL — skip category/tag/author/feed/asset links and don't
+    // fall back to the source landing page (which sends the wrong signal).
+    const base = new URL(sourceUrl);
+    let link: string | undefined;
+    for (const m of section.matchAll(/\[([^\]]*)\]\(([^)]+)\)/g)) {
+      let candidate = m[2].trim();
+      if (candidate.startsWith('/')) candidate = `${base.origin}${candidate}`;
+      if (isBlogPostLink(candidate, sourceUrl)) { link = candidate; break; }
     }
+    if (!link) continue;
 
     const summaryRaw = lines.slice(1, 4).join(' ');
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
