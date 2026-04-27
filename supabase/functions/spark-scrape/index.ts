@@ -694,7 +694,12 @@ Deno.serve(async (req) => {
             date: previousSnapshot.date || today,
             summary: prevSummary,
             articles: [],
-            all_articles: Array.isArray(prevSummary.all_articles) ? prevSummary.all_articles : [],
+            all_articles: Array.isArray(prevSummary.all_articles)
+              ? prevSummary.all_articles.filter((it) => {
+                  const link = (it as { link?: unknown })?.link;
+                  return isBlogPostLink(typeof link === 'string' ? link : undefined, '');
+                })
+              : [],
             trends: deriveTrends([], previousSnapshot.tag_counts as Record<string, number>),
           },
           metrics,
