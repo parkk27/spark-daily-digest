@@ -25,6 +25,8 @@ const SOURCES = [
   { name: 'aws', url: 'https://aws.amazon.com/blogs/big-data/feed/', weight: 0.9 },
   { name: 'iceberg', url: 'https://iceberg.apache.org/blogs/', weight: 0.95 },
   { name: 'delta', url: 'https://delta.io/blog/', weight: 0.95 },
+  { name: 'google-transform', url: 'https://cloud.google.com/transform/topics/data-analytics', weight: 0.9 },
+  { name: 'google-next', url: 'https://cloud.google.com/blog/topics/google-cloud-next', weight: 0.9 },
 ];
 
 // ── Topic Tagging ──
@@ -50,6 +52,9 @@ const TOPIC_TAGS: Record<string, string> = {
   'photon': 'databricks', 'lakehouse': 'fabric', 'data lake': 'fabric',
   'serverless': 'emr', 'sql': 'spark', 'kubernetes': 'streaming',
   'k8s': 'streaming', 'aws glue': 'batch', 'glue etl': 'batch',
+  'agentic': 'ai', 'agent': 'ai', 'gemini': 'ai', 'vertex ai': 'ai',
+  'bigquery studio': 'bigquery', 'dataplex': 'governance',
+  'data cloud': 'fabric', 'looker': 'bigquery', 'duet ai': 'ai',
 };
 
 function extractTags(text: string): string[] {
@@ -145,6 +150,8 @@ const SOURCE_URLS = new Set([
   'https://aws.amazon.com/blogs/big-data/feed/',
   'https://iceberg.apache.org/blogs/',
   'https://delta.io/blog/',
+  'https://cloud.google.com/transform/topics/data-analytics',
+  'https://cloud.google.com/blog/topics/google-cloud-next',
 ]);
 
 const NON_POST_PATH_PATTERNS = [
