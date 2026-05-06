@@ -329,8 +329,9 @@ function extractArticlesFromMarkdown(
   if (sourceName === 'google-next' || sourceName === 'google-transform') {
     const base = new URL(sourceUrl);
     const seenLinks = new Set<string>();
-    // Match [anchor](url) where anchor may span multiple lines (DOTALL via [\s\S]).
-    const linkRe = /\[([\s\S]*?)\]\(([^)]+)\)/g;
+    // Match [anchor](url) where anchor may contain nested image markdown
+    // (![alt](src)) and span multiple lines.
+    const linkRe = /\[((?:[^\[\]]|!\[[^\]]*\]\([^)]*\))*)\]\(([^)]+)\)/g;
     let m: RegExpExecArray | null;
     while ((m = linkRe.exec(markdown)) !== null) {
       const anchor = m[1];
