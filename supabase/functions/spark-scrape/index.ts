@@ -322,6 +322,61 @@ function extractArticlesFromMarkdown(
   const sections = markdown.split(/\n#{1,3}\s+/).filter(Boolean);
   const display = displaySource(sourceName);
 
+  // ── Card-style extractor for link-grid pages (Google Cloud Next, Transform) ──
+  // These pages render each article as a single multi-line markdown link with no
+  // headings between cards. The section splitter above misses them, so we pull
+  // every link whose anchor text contains a bolded title.
+  if (sourceName === 'google-next' || sourceName === 'google-transform') {
+    const base = new URL(sourceUrl);
+    const seenLinks = new Set<string>();
+    // Match [anchor](url) where anchor may contain nested image markdown
+    // (![alt](src)) and span multiple lines.
+    const linkRe = /\[((?:[^\[\]]|!\[[^\]]*\]\([^)]*\))*)\]\(([^)]+)\)/g;
+    let m: RegExpExecArray | null;
+    while ((m = linkRe.exec(markdown)) !== null) {
+      const anchor = m[1];
+      let candidate = m[2].trim();
+      if (candidate.startsWith('/')) candidate = `${base.origin}${candidate}`;
+      if (!isBlogPostLink(candidate, sourceUrl)) continue;
+      if (seenLinks.has(candidate)) continue;
+
+      // Pull the bolded headline out of the anchor text.
+      const boldMatch = anchor.match(/\*\*([^*]+)\*\*/);
+      let title = boldMatch ? cleanSummaryText(boldMatch[1]).trim() : cleanSummaryText(anchor).trim();
+      if (!title || title.length < 10) {
+        const slug = candidate.split('?')[0].split('#')[0].replace(/\/$/, '').split('/').pop() || '';
+        title = slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      }
+      if (title.length < 10 || title.length > 200) continue;
+
+      seenLinks.add(candidate);
+
+      const summary = title;
+      if (isNoise(title, summary)) continue;
+      if (EXCLUDE_PATTERNS.some((p) => p.test(`${title} ${summary}`))) continue;
+      if (isReleaseNote(title, summary, candidate)) continue;
+
+      const tags = extractTags(`${title} ${summary}`);
+      const signalScore = computeSignalScore(title, summary, sourceWeight) + 2;
+
+      articles.push({
+        title,
+        source: display,
+        rawSource: sourceName,
+        summary,
+        link: candidate,
+        tags,
+        date: today,
+        publishedAt: undefined,
+        ageDays: undefined,
+        weight: sourceWeight,
+        signalScore,
+      });
+    }
+    return articles;
+  }
+
+
   // Take more candidate sections — we'll filter aggressively by date + signal.
   for (const section of sections.slice(0, 20)) {
     const lines = section.trim().split('\n').filter(Boolean);
