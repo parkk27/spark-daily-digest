@@ -327,20 +327,44 @@ function extractArticlesFromMarkdown(
     const lines = section.trim().split('\n').filter(Boolean);
     if (lines.length === 0) continue;
 
-    const title = cleanSummaryText(lines[0]).trim();
-    if (title.length < 10 || title.length > 200) continue;
+    let title = cleanSummaryText(lines[0]).trim();
+    if (title.length > 200) continue;
 
     // Pick the first markdown link in the section that looks like a real
     // blog post URL — skip category/tag/author/feed/asset links and don't
     // fall back to the source landing page (which sends the wrong signal).
     const base = new URL(sourceUrl);
     let link: string | undefined;
+    let linkText: string | undefined;
     for (const m of section.matchAll(/\[([^\]]*)\]\(([^)]+)\)/g)) {
       let candidate = m[2].trim();
       if (candidate.startsWith('/')) candidate = `${base.origin}${candidate}`;
-      if (isBlogPostLink(candidate, sourceUrl)) { link = candidate; break; }
+      if (isBlogPostLink(candidate, sourceUrl)) {
+        link = candidate;
+        linkText = cleanSummaryText(m[1]).trim();
+        break;
+      }
     }
     if (!link) continue;
+
+    // If the section heading is too generic/short (e.g. a category name like
+    // "Google Cloud Next"), prefer the link's anchor text or derive a readable
+    // title from the URL slug — anything is better than a category label that
+    // doesn't describe the linked article.
+    const looksGeneric =
+      title.length < 18 ||
+      title.toLowerCase() === display.toLowerCase() ||
+      /^(google cloud next|data analytics|engineering|open source|big data|news|blog)$/i.test(title);
+    if (looksGeneric) {
+      if (linkText && linkText.length >= 18) {
+        title = linkText;
+      } else {
+        const slug = link.split('?')[0].split('#')[0].replace(/\/$/, '').split('/').pop() || '';
+        const fromSlug = slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        if (fromSlug.length >= 18) title = fromSlug;
+      }
+    }
+    if (title.length < 10) continue;
 
     const summaryRaw = lines.slice(1, 4).join(' ');
     const summary = cleanSummaryText(summaryRaw).slice(0, 200) || title;
