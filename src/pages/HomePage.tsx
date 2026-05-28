@@ -1,8 +1,8 @@
-import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash, Mail, Send, CheckCircle, AlertCircle } from "lucide-react";
+import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { useState } from "react";
 import { useSparkData } from "@/hooks/useSparkData";
-import { supabase } from "@/integrations/supabase/client";
+import AskBigDataHub from "@/components/AskBigDataHub";
+
 
 const SectionCard = ({
   icon: Icon,
@@ -36,27 +36,11 @@ const SectionCard = ({
 
 const HomePage = () => {
   const { data, isLoading, isFetching, refetch } = useSparkData();
-  const [emailStatus, setEmailStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const trends = data?.trends ?? [];
   const topTrends = trends.filter((t) => t.status === "growing" || t.status === "new").slice(0, 4);
   const { summary, date } = data?.dailySummary ?? {
     summary: { highlights: [], trends: [], impact: [], topInsight: "" },
     date: new Date().toISOString().split("T")[0],
-  };
-
-  const handleSendTestEmail = async () => {
-    setEmailStatus("loading");
-    try {
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: { email: "test@example.com" },
-      });
-      if (error) throw error;
-      setEmailStatus("success");
-      setTimeout(() => setEmailStatus("idle"), 4000);
-    } catch {
-      setEmailStatus("error");
-      setTimeout(() => setEmailStatus("idle"), 4000);
-    }
   };
 
   return (
@@ -134,6 +118,7 @@ const HomePage = () => {
 
           <SectionCard icon={TrendingUp} title="Emerging Trends" items={summary.trends} delay={200} />
           <SectionCard icon={Sparkles} title="Why It Matters" items={summary.impact} delay={300} />
+          <AskBigDataHub />
         </div>
       )}
     </div>
