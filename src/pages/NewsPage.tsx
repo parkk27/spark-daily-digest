@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import SourceBadge from "@/components/SourceBadge";
 import { useSparkData } from "@/hooks/useSparkData";
+import SeoHead from "@/components/SeoHead";
 
 const NewsPage = () => {
   const { data, isLoading } = useSparkData();
@@ -17,6 +18,18 @@ const NewsPage = () => {
 
   return (
     <div className="container max-w-4xl py-8">
+      <SeoHead
+        title="News Feed — Big Data Intelligence Hub"
+        description="Latest news from Databricks, Apache Spark, Iceberg, Delta Lake, Microsoft Fabric, AWS EMR, and Google BigQuery — refreshed daily."
+        path="/news"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Big Data News Feed",
+          url: "https://bigdata-hub.lovable.app/news",
+          description: "Curated daily news from the big data ecosystem.",
+        }}
+      />
       <h1 className="mb-8 text-2xl font-bold tracking-tight text-foreground opacity-0 animate-fade-in">
         News Feed
       </h1>

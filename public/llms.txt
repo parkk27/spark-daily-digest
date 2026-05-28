@@ -1,0 +1,9 @@
+# Big Data Intelligence Hub
+
+> AI-curated daily intelligence on the modern big data ecosystem — Apache Spark, Iceberg, Delta Lake, Microsoft Fabric, AWS EMR, Google BigQuery, and Databricks.
+
+## Pages
+
+- [Daily Brief](/): Today's top insight, highlights, emerging trends, and strategic impact.
+- [News Feed](/news): Latest articles from Databricks, Apache, AWS, Google, and Microsoft, grouped by day.
+- [Ecosystem Trends](/trends): Biggest shift today, fastest growing technologies, vendor momentum, emerging signals, and declining topics.
