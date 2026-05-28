@@ -2,6 +2,7 @@ import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-re
 import { format, parseISO } from "date-fns";
 import { useSparkData } from "@/hooks/useSparkData";
 import AskBigDataHub from "@/components/AskBigDataHub";
+import SeoHead from "@/components/SeoHead";
 
 
 const SectionCard = ({
@@ -45,6 +46,25 @@ const HomePage = () => {
 
   return (
     <div className="container max-w-4xl py-8">
+      <SeoHead
+        title="Big Data Intelligence Hub — Daily Ecosystem Brief"
+        description="Daily AI-curated brief on Databricks, Spark, Iceberg, Delta, Fabric, EMR, and BigQuery. Top insights, highlights, and trends in one place."
+        path="/"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "Big Data Intelligence Hub",
+            url: "https://bigdata-hub.lovable.app/",
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Big Data Intelligence Hub",
+            url: "https://bigdata-hub.lovable.app/",
+          },
+        ]}
+      />
       <div className="mb-8 flex items-start justify-between opacity-0 animate-fade-in">
         <div>
           <p className="text-sm text-muted-foreground">
@@ -57,6 +77,7 @@ const HomePage = () => {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
+          aria-label="Refresh data"
           className="mt-1 rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
           title="Refresh data"
         >

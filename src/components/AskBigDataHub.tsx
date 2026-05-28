@@ -62,6 +62,7 @@ const AskBigDataHub = () => {
         {messages.length > 0 && (
           <button
             onClick={() => setMessages([])}
+            aria-label="Clear conversation"
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             title="Clear conversation"
           >
@@ -148,6 +149,7 @@ const AskBigDataHub = () => {
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
+            aria-label="Send message"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
             title="Send"
           >

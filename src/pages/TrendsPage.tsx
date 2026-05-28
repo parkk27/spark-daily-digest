@@ -11,6 +11,7 @@ import {
 } from "@/lib/trends";
 import BiggestShift from "@/components/trends/BiggestShift";
 import TrendSection from "@/components/trends/TrendSection";
+import SeoHead from "@/components/SeoHead";
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
@@ -37,6 +38,18 @@ const TrendsPage = () => {
 
   return (
     <div className="container max-w-4xl py-8">
+      <SeoHead
+        title="Ecosystem Trends — Big Data Intelligence Hub"
+        description="Executive view of big data ecosystem momentum: biggest shifts, fastest growing technologies, vendor momentum, emerging signals, and declining topics."
+        path="/trends"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          name: "Big Data Ecosystem Trends",
+          url: "https://bigdata-hub.lovable.app/trends",
+          description: "Strategic trend analysis across Spark, Iceberg, Delta, Fabric, EMR, and BigQuery.",
+        }}
+      />
       <div className="mb-8 opacity-0 animate-fade-in">
         <p className="text-sm text-muted-foreground">Ecosystem Intelligence</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
