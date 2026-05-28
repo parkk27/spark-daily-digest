@@ -118,6 +118,7 @@ const HomePage = () => {
 
           <SectionCard icon={TrendingUp} title="Emerging Trends" items={summary.trends} delay={200} />
           <SectionCard icon={Sparkles} title="Why It Matters" items={summary.impact} delay={300} />
+          <AskBigDataHub />
         </div>
       )}
     </div>
