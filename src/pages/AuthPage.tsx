@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Github } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -21,11 +21,13 @@ const TRUST = [
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const rawNext = params.get("next") ?? "";
   // Only allow same-origin relative paths.
   const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "";
-  const afterAuth = next || "/settings";
+  const afterAuth = next || "/dashboard";
+  const isSignup = location.pathname === "/signup";
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,7 +48,8 @@ const AuthPage = () => {
   };
 
   const returnUrl =
-    window.location.origin + (next ? `/auth?next=${encodeURIComponent(next)}` : "");
+    window.location.origin + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
+
 
   const handleSignIn = (e: FormEvent) => {
     e.preventDefault();
@@ -108,9 +111,13 @@ const AuthPage = () => {
   return (
     <div className="relative overflow-hidden">
       <SeoHead
-        title="Sign in — Big Data Intelligence Hub"
-        description="Sign in to personalize your big data intelligence briefings, watchlists and saved searches."
-        path="/auth"
+        title={
+          isSignup
+            ? "Create account — Big Data Intelligence Hub"
+            : "Sign in — Big Data Intelligence Hub"
+        }
+        description="Sign in to Big Data Intelligence Hub for daily executive briefings, trend momentum and the AI copilot."
+        path={isSignup ? "/signup" : "/signin"}
       />
       <div
         aria-hidden="true"
@@ -122,12 +129,21 @@ const AuthPage = () => {
         <div className="order-1 lg:order-2 lg:col-span-2">
           <div className="lg:sticky lg:top-20">
             <div className="animate-fade-in rounded-2xl border border-border/70 bg-card/70 p-6 shadow-xl backdrop-blur-md">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">Welcome back</h2>
+              {next && (
+                <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground">
+                  Please sign in to access Big Data Intelligence Hub.
+                </div>
+              )}
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                {isSignup ? "Create your account" : "Welcome back"}
+              </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                The dashboard stays free and public — signing in only adds personalization.
+                Sign in to unlock the dashboard, news, trends and the copilot.
               </p>
 
-              <Tabs defaultValue="signin" className="mt-5">
+
+              <Tabs defaultValue={isSignup ? "signup" : "signin"} className="mt-5">
+
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="signin">Sign in</TabsTrigger>
                   <TabsTrigger value="signup">Sign up</TabsTrigger>

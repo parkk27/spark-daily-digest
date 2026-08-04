@@ -41,7 +41,7 @@ const SettingsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    if (!loading && !user) navigate("/auth", { replace: true });
+    if (!loading && !user) navigate("/signin", { replace: true });
   }, [user, loading, navigate]);
 
   if (loading || !user) return null;
