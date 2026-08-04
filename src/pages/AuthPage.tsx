@@ -129,12 +129,18 @@ const AuthPage = () => {
         <div className="order-1 lg:order-2 lg:col-span-2">
           <div className="lg:sticky lg:top-20">
             <div className="animate-fade-in rounded-2xl border border-border/70 bg-card/70 p-6 shadow-xl backdrop-blur-md">
+              {next && (
+                <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground">
+                  Please sign in to access Big Data Intelligence Hub.
+                </div>
+              )}
               <h2 className="text-lg font-semibold tracking-tight text-foreground">
                 {isSignup ? "Create your account" : "Welcome back"}
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Sign in to unlock the dashboard, news, trends and the copilot.
               </p>
+
 
               <Tabs defaultValue={isSignup ? "signup" : "signin"} className="mt-5">
 
