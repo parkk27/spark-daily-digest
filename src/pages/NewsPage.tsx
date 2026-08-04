@@ -1,12 +1,24 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Star } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import SourceBadge from "@/components/SourceBadge";
 import { useSparkData } from "@/hooks/useSparkData";
+import { useWatchlist } from "@/hooks/usePersonalization";
+import { useAuth } from "@/hooks/useAuth";
 import SeoHead from "@/components/SeoHead";
 
 const NewsPage = () => {
   const { data, isLoading } = useSparkData();
+  const { user } = useAuth();
+  const watchlist = useWatchlist();
   const articles = data?.allArticles ?? [];
+
+  const topics = user ? watchlist.data ?? [] : [];
+  const pinned = topics.length
+    ? articles.filter((a) => {
+        const hay = `${a.title} ${a.summary} ${a.tags.join(" ")}`.toLowerCase();
+        return topics.some((t) => hay.includes(t));
+      })
+    : [];
 
   const grouped = articles.reduce<Record<string, typeof articles>>((acc, article) => {
     const d = article.date ?? "unknown";
