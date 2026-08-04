@@ -21,11 +21,13 @@ const TRUST = [
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const rawNext = params.get("next") ?? "";
   // Only allow same-origin relative paths.
   const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "";
-  const afterAuth = next || "/settings";
+  const afterAuth = next || "/dashboard";
+  const isSignup = location.pathname === "/signup";
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,7 +48,8 @@ const AuthPage = () => {
   };
 
   const returnUrl =
-    window.location.origin + (next ? `/auth?next=${encodeURIComponent(next)}` : "");
+    window.location.origin + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
+
 
   const handleSignIn = (e: FormEvent) => {
     e.preventDefault();
