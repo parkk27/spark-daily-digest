@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "bigdata-hub-mcp",
+      "version": "0.1.0",
+      "title": "Big Data Intelligence Hub"
+    },
+    "tools": [
+      {
+        "name": "get_daily_brief",
+        "title": "Get daily brief",
+        "description": "Get the latest AI-curated big data ecosystem brief: top insight, key highlights, emerging trends, and why-it-matters impact lines.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Optional ISO date (YYYY-MM-DD). Omit for the most recent brief."
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_topic_trends",
+        "title": "Get topic trends",
+        "description": "Get today's tracked big data topics with momentum status (growing, declining, new, stable), mention counts and day-over-day change.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_articles",
+        "title": "List articles",
+        "description": "List the most recently ingested big data ecosystem articles (Databricks, Spark, Iceberg, Delta, Fabric, EMR, BigQuery, Google Cloud) with title, source, summary, tags and link.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Max articles to return (1-40). Default 15."
+            },
+            "source": {
+              "type": "string",
+              "description": "Optional source filter, e.g. 'databricks' or 'google'."
+            },
+            "days": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "How many recent days of snapshots to scan. Default 3."
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_articles",
+        "title": "Search articles",
+        "description": "Keyword-search recently ingested big data ecosystem articles by title, summary or tag (e.g. 'iceberg', 'lakehouse', 'agentic').",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Keyword or phrase to search for."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Max results (1-25). Default 10."
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
