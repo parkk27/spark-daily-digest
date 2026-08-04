@@ -111,9 +111,13 @@ const AuthPage = () => {
   return (
     <div className="relative overflow-hidden">
       <SeoHead
-        title="Sign in — Big Data Intelligence Hub"
-        description="Sign in to personalize your big data intelligence briefings, watchlists and saved searches."
-        path="/auth"
+        title={
+          isSignup
+            ? "Create account — Big Data Intelligence Hub"
+            : "Sign in — Big Data Intelligence Hub"
+        }
+        description="Sign in to Big Data Intelligence Hub for daily executive briefings, trend momentum and the AI copilot."
+        path={isSignup ? "/signup" : "/signin"}
       />
       <div
         aria-hidden="true"
@@ -125,12 +129,15 @@ const AuthPage = () => {
         <div className="order-1 lg:order-2 lg:col-span-2">
           <div className="lg:sticky lg:top-20">
             <div className="animate-fade-in rounded-2xl border border-border/70 bg-card/70 p-6 shadow-xl backdrop-blur-md">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">Welcome back</h2>
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                {isSignup ? "Create your account" : "Welcome back"}
+              </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                The dashboard stays free and public — signing in only adds personalization.
+                Sign in to unlock the dashboard, news, trends and the copilot.
               </p>
 
-              <Tabs defaultValue="signin" className="mt-5">
+              <Tabs defaultValue={isSignup ? "signup" : "signin"} className="mt-5">
+
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="signin">Sign in</TabsTrigger>
                   <TabsTrigger value="signup">Sign up</TabsTrigger>
