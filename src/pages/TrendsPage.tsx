@@ -1,7 +1,9 @@
-import { TrendingUp, Sparkles, TrendingDown, Building2 } from "lucide-react";
+import { TrendingUp, Sparkles, TrendingDown, Building2, Star } from "lucide-react";
 import { useMemo } from "react";
 import { useSparkData } from "@/hooks/useSparkData";
 import { useTrendInsights } from "@/hooks/useTrendInsights";
+import { useWatchlist } from "@/hooks/usePersonalization";
+import { useAuth } from "@/hooks/useAuth";
 import {
   getBiggestShift,
   getFastestGrowing,
@@ -15,9 +17,17 @@ import SeoHead from "@/components/SeoHead";
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
+  const { user } = useAuth();
+  const watchlist = useWatchlist();
   const trends = data?.trends ?? [];
   const articles = data?.allArticles ?? [];
   const date = data?.dailySummary.date;
+
+  const watched = useMemo(() => {
+    const topics = user ? watchlist.data ?? [] : [];
+    if (!topics.length) return [];
+    return trends.filter((t) => topics.some((w) => t.topic.toLowerCase().includes(w)));
+  }, [trends, watchlist.data, user]);
 
   const insightsQuery = useTrendInsights(date, trends, articles);
   const insightsMap = useMemo(() => {
@@ -67,6 +77,19 @@ const TrendsPage = () => {
         <p className="text-sm text-muted-foreground">No trend data available.</p>
       ) : (
         <div className="space-y-6">
+          {watched.length > 0 && (
+            <TrendSection
+              icon={Star}
+              title="Your Watchlist"
+              subtitle="Topics you track, pinned to the top."
+              trends={watched}
+              insights={insightsMap}
+              loading={loadingWhy}
+              delay={0}
+              empty="No movement on your watched topics."
+            />
+          )}
+
           <BiggestShift
             trend={biggest}
             why={biggest ? insightsMap[biggest.topic.toLowerCase()] : undefined}
