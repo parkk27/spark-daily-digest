@@ -99,14 +99,16 @@ const AuthPage = () => {
 
   const handleGoogle = () => {
     withBusy(async () => {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: returnUrl,
+      // Standard backend OAuth: works on any host (Lovable, Vercel, custom domains).
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: returnUrl },
       });
-      if (result.error) return toast.error("Google sign-in failed.");
-      if (result.redirected) return;
-      navigate(afterAuth, { replace: true });
+      if (error) return toast.error(error.message || "Google sign-in failed.");
+      // Browser redirects to Google from here.
     });
   };
+
 
   return (
     <div className="relative overflow-hidden">
