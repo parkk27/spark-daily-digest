@@ -1,21 +1,43 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
-import HomePage from "@/pages/HomePage";
-import NewsPage from "@/pages/NewsPage";
-import TrendsPage from "@/pages/TrendsPage";
+import Footer from "@/components/Footer";
+import RequireAuth from "@/components/RequireAuth";
+import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
-import SettingsPage from "@/pages/SettingsPage";
+import AboutPage from "@/pages/AboutPage";
+import ContactPage from "@/pages/ContactPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import TermsPage from "@/pages/TermsPage";
 import OAuthConsent from "@/pages/OAuthConsent";
-// EnvironmentSetupPage kept in codebase but not routed
 import NotFound from "@/pages/NotFound";
 
+// Protected modules are lazy-loaded so the public landing stays fast.
+const HomePage = lazy(() => import("@/pages/HomePage"));
+const NewsPage = lazy(() => import("@/pages/NewsPage"));
+const TrendsPage = lazy(() => import("@/pages/TrendsPage"));
+const CopilotPage = lazy(() => import("@/pages/CopilotPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 
 const queryClient = new QueryClient();
+
+const PageFallback = () => (
+  <div className="container max-w-4xl space-y-4 py-12">
+    <div className="h-8 w-1/3 animate-pulse rounded-md bg-secondary" />
+    <div className="h-40 animate-pulse rounded-lg bg-secondary/60" />
+  </div>
+);
+
+const protect = (element: React.ReactNode) => (
+  <RequireAuth>
+    <Suspense fallback={<PageFallback />}>{element}</Suspense>
+  </RequireAuth>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -27,17 +49,28 @@ const App = () => (
           <Navbar />
           <main>
             <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/news" element={<NewsPage />} />
-              <Route path="/trends" element={<TrendsPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              {/* Public */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/signin" element={<AuthPage />} />
+              <Route path="/signup" element={<AuthPage />} />
+              <Route path="/auth" element={<Navigate to="/signin" replace />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-              
+
+              {/* Protected */}
+              <Route path="/dashboard" element={protect(<HomePage />)} />
+              <Route path="/news" element={protect(<NewsPage />)} />
+              <Route path="/trends" element={protect(<TrendsPage />)} />
+              <Route path="/copilot" element={protect(<CopilotPage />)} />
+              <Route path="/settings" element={protect(<SettingsPage />)} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
-
           </main>
+          <Footer />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
