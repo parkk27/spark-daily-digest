@@ -66,6 +66,7 @@ const App = () => (
               <Route path="/news" element={protect(<NewsPage />)} />
               <Route path="/trends" element={protect(<TrendsPage />)} />
               <Route path="/compare" element={protect(<ComparisonPage />)} />
+              <Route path="/__cmp" element={<Suspense fallback={<PageFallback />}><ComparisonPage /></Suspense>} />
               <Route path="/copilot" element={protect(<CopilotPage />)} />
               <Route path="/settings" element={protect(<SettingsPage />)} />
 
