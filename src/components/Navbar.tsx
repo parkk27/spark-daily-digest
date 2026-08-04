@@ -17,7 +17,7 @@ const links = [
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useIsAdmin();
+  
   const navigate = useNavigate();
 
 
