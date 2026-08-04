@@ -46,6 +46,29 @@ const NewsPage = () => {
         News Feed
       </h1>
 
+      {pinned.length > 0 && (
+        <section className="mb-8 rounded-lg border border-primary/30 bg-primary/5 p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
+            <Star className="h-4 w-4" /> From your watchlist
+          </h2>
+          <div className="space-y-2">
+            {pinned.slice(0, 5).map((a, i) => (
+              <a
+                key={i}
+                href={a.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary/40"
+              >
+                <SourceBadge source={a.source} />
+                <span className="min-w-0 flex-1 truncate text-sm text-foreground">{a.title}</span>
+                <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
