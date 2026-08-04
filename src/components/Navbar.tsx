@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Zap, Home, Newspaper, TrendingUp, Settings, LogOut, LogIn } from "lucide-react";
+import { Zap, Home, Newspaper, TrendingUp, Settings, LogOut, LogIn, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,7 +18,9 @@ const links = [
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const navigate = useNavigate();
+
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -47,7 +50,24 @@ const Navbar = () => {
             </NavLink>
           ))}
 
+          {isAdmin && (
+            <NavLink
+              to="/admin/environment"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                }`
+              }
+            >
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Setup</span>
+            </NavLink>
+          )}
+
           {user ? (
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" aria-label="Account menu" className="ml-1 gap-1.5">

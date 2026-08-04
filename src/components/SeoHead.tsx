@@ -7,9 +7,10 @@ interface SeoHeadProps {
   description: string;
   path: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  noindex?: boolean;
 }
 
-const SeoHead = ({ title, description, path, jsonLd }: SeoHeadProps) => {
+const SeoHead = ({ title, description, path, jsonLd, noindex }: SeoHeadProps) => {
   const url = `${SITE}${path}`;
   const lds = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
   return (
@@ -23,6 +24,7 @@ const SeoHead = ({ title, description, path, jsonLd }: SeoHeadProps) => {
       <meta property="og:type" content="website" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
+      {noindex && <meta name="robots" content="noindex, nofollow" />}
       {lds.map((ld, i) => (
         <script key={i} type="application/ld+json">
           {JSON.stringify(ld)}
@@ -33,3 +35,4 @@ const SeoHead = ({ title, description, path, jsonLd }: SeoHeadProps) => {
 };
 
 export default SeoHead;
+
