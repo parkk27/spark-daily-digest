@@ -21,6 +21,7 @@ import NotFound from "@/pages/NotFound";
 const HomePage = lazy(() => import("@/pages/HomePage"));
 const NewsPage = lazy(() => import("@/pages/NewsPage"));
 const TrendsPage = lazy(() => import("@/pages/TrendsPage"));
+const ComparisonPage = lazy(() => import("@/pages/ComparisonPage"));
 const CopilotPage = lazy(() => import("@/pages/CopilotPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/dashboard" element={protect(<HomePage />)} />
               <Route path="/news" element={protect(<NewsPage />)} />
               <Route path="/trends" element={protect(<TrendsPage />)} />
+              <Route path="/compare" element={protect(<ComparisonPage />)} />
               <Route path="/copilot" element={protect(<CopilotPage />)} />
               <Route path="/settings" element={protect(<SettingsPage />)} />
 

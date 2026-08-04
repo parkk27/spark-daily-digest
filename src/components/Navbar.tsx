@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Zap, LayoutDashboard, Newspaper, TrendingUp, Sparkles, Settings, LogOut, LogIn, Info, Home } from "lucide-react";
+import { Zap, LayoutDashboard, Newspaper, TrendingUp, BarChart3, Sparkles, Settings, LogOut, LogIn, Info, Home } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ const authedLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/news", label: "News", icon: Newspaper },
   { to: "/trends", label: "Trends", icon: TrendingUp },
+  { to: "/compare", label: "Compare", icon: BarChart3 },
   { to: "/copilot", label: "Copilot", icon: Sparkles },
 ];
 
