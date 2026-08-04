@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import {
   CATEGORY_LABELS,
   RECOMMENDATION_LABELS,
-  ROLE_LABELS,
   VENDOR_LABELS,
   confidenceSummary,
   type CapabilityBenchmark,
