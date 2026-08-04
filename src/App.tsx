@@ -21,6 +21,7 @@ import NotFound from "@/pages/NotFound";
 const HomePage = lazy(() => import("@/pages/HomePage"));
 const NewsPage = lazy(() => import("@/pages/NewsPage"));
 const TrendsPage = lazy(() => import("@/pages/TrendsPage"));
+const ComparisonPage = lazy(() => import("@/pages/ComparisonPage"));
 const CopilotPage = lazy(() => import("@/pages/CopilotPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 
