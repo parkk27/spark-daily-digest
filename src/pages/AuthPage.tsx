@@ -23,7 +23,7 @@ const AuthPage = () => {
     if (!loading && user) navigate("/settings", { replace: true });
   }, [user, loading, navigate]);
 
-  const withBusy = async (fn: () => Promise<void>) => {
+  const withBusy = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     try {
       await fn();
