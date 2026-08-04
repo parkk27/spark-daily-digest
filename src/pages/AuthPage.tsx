@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Github } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -21,6 +21,11 @@ const TRUST = [
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const rawNext = params.get("next") ?? "";
+  // Only allow same-origin relative paths.
+  const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "";
+  const afterAuth = next || "/settings";
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,8 +33,8 @@ const AuthPage = () => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate("/settings", { replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) navigate(afterAuth, { replace: true });
+  }, [user, loading, navigate, afterAuth]);
 
   const withBusy = async (fn: () => Promise<unknown>) => {
     setBusy(true);
