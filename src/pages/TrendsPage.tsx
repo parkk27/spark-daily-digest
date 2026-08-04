@@ -77,6 +77,19 @@ const TrendsPage = () => {
         <p className="text-sm text-muted-foreground">No trend data available.</p>
       ) : (
         <div className="space-y-6">
+          {watched.length > 0 && (
+            <TrendSection
+              icon={Star}
+              title="Your Watchlist"
+              subtitle="Topics you track, pinned to the top."
+              trends={watched}
+              insights={insightsMap}
+              loading={loadingWhy}
+              delay={0}
+              empty="No movement on your watched topics."
+            />
+          )}
+
           <BiggestShift
             trend={biggest}
             why={biggest ? insightsMap[biggest.topic.toLowerCase()] : undefined}
