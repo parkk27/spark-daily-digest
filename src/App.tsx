@@ -10,7 +10,9 @@ import NewsPage from "@/pages/NewsPage";
 import TrendsPage from "@/pages/TrendsPage";
 import AuthPage from "@/pages/AuthPage";
 import SettingsPage from "@/pages/SettingsPage";
+import EnvironmentSetupPage from "@/pages/EnvironmentSetupPage";
 import NotFound from "@/pages/NotFound";
+
 
 const queryClient = new QueryClient();
 
@@ -29,8 +31,10 @@ const App = () => (
               <Route path="/trends" element={<TrendsPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/admin/environment" element={<EnvironmentSetupPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+
           </main>
         </AuthProvider>
       </BrowserRouter>
