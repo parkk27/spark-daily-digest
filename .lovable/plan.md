@@ -1,51 +1,51 @@
-# Hosting the frontend on Vercel
+# Secrets and Environment Setup page
 
-## What you actually need
+## Goal
 
-Only two values, and both are public by design:
+Add an admin-only `/admin/environment` page that explains every secret and environment variable used by the app, shows the retrievable public values, and clearly labels which ones must stay backend-only.
 
-| Variable | Value |
-| --- | --- |
-| `VITE_SUPABASE_URL` | `https://dpjzypvarubkomehrwht.supabase.co` |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | the anon key already in the project `.env` |
-| `VITE_SUPABASE_PROJECT_ID` | `dpjzypvarubkomehrwht` (optional) |
+## Decisions
 
-These are meant to ship in the browser bundle; Row Level Security protects the data.
+- **Audience**: admin-only.
+- **Route**: `/admin/environment`.
+- **Navigation**: link in the main navbar, visible only to users with the `admin` role.
+- **Access**: gated by `public.user_roles` (`role = 'admin'`). A one-time bootstrap edge function lets the first signed-in user claim admin access without needing backend console access.
 
-The other three keys stay where they are and must never go into Vercel:
+## What I will change
 
-- `FIRECRAWL_API_KEY` — connector-managed, write-only, used only by the scrape edge function.
-- `LOVABLE_API_KEY` — auto-provisioned, write-only, used by the copilot / trend-insight / email functions.
-- `OPENAI_API_KEY` — not configured at all; the app calls the Lovable AI gateway instead.
+### Frontend
 
-All edge functions keep running on Lovable Cloud regardless of where the frontend is hosted. The Vercel build only needs to reach them over HTTPS, which it already does.
+1. **New hook**: `src/hooks/useAdmin.ts`
+   - Queries `public.user_roles` for `role = 'admin'` where `user_id = auth.uid()`.
+   - Returns `{ isAdmin, loading, error }`.
 
-## Steps
+2. **New page**: `src/pages/EnvironmentSetupPage.tsx`
+   - Uses `useAdmin` to require admin access.
+   - Redirects unauthenticated users to `/auth`.
+   - Shows a "Claim admin access" button that calls the `bootstrap-admin` edge function if no admin exists yet.
+   - Displays a table of variables grouped by visibility:
+     - **Public frontend variables**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (also shown as `SUPABASE_ANON_KEY`), and `VITE_SUPABASE_PROJECT_ID`. Values read directly from `import.meta.env`.
+     - **Backend-only secrets**: `SUPABASE_SERVICE_ROLE_KEY`, `FIRECRAWL_API_KEY`, `GOOGLE_SEARCH_CONSOLE_API_KEY`, `LOVABLE_API_KEY`, `OPENAI_API_KEY`. Values are never shown; status badges explain the source and how to update or rotate each one.
+   - Includes copy-to-clipboard buttons for the public values.
+   - Adds a short explanation of why public Supabase keys are safe and why the rest stay server-side.
+   - Uses `SeoHead` with a new `noindex` flag to prevent indexing of the admin page.
 
-1. Push the project to GitHub (Chat input + → GitHub → Connect project) so Vercel can import it.
-2. In Vercel: New Project → import the repo. Framework preset Vite, build command `npm run build`, output dir `dist`.
-3. Add the two `VITE_` env vars above under Vercel → Settings → Environment Variables (Production + Preview).
-4. Add a SPA rewrite so deep links don't 404 — create `vercel.json` at the project root:
+3. **Update `SeoHead.tsx`** to accept an optional `noindex` prop that renders `<meta name="robots" content="noindex, nofollow" />`.
 
-```json
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
-```
+4. **Update `App.tsx`**: add `<Route path="/admin/environment" element={<EnvironmentSetupPage />} />`.
 
-5. Deploy, then point your custom domain at the Vercel deployment in Vercel → Domains.
+5. **Update `Navbar.tsx`**: add a "Setup" link with a `Shield`/`Key` icon to the main nav, rendered only when `isAdmin`.
 
-## Follow-up items after the first Vercel deploy
+### Backend
 
-- Auth redirect URLs: add the Vercel domain to the backend's allowed redirect URLs, otherwise Google sign-in and magic links bounce back to the Lovable URL.
-- CORS: the edge functions already send `Access-Control-Allow-Origin: *`, so no change needed.
-- `public/sitemap.xml`, `public/robots.txt`, and the canonical URLs in `SeoHead` currently reference `bigdata-hub.lovable.app`. Update them to the new domain so search engines index the right host.
+6. **New edge function**: `supabase/functions/bootstrap-admin/index.ts`
+   - Verifies the caller via the `Authorization` JWT.
+   - Uses the service-role key to check if any row exists in `public.user_roles` with `role = 'admin'`.
+   - If none, inserts the current user's id as `admin`.
+   - If an admin already exists, returns `{ bootstrapped: false, reason: "admin-exists" }`.
+   - This provides a safe, one-time way for the project owner to claim admin access.
 
-## What I will change in the codebase
+## Follow-up
 
-Only two things, both frontend/config:
-
-1. Add `vercel.json` with the SPA rewrite.
-2. Optionally swap the hardcoded `bigdata-hub.lovable.app` origin in the SEO files/component for the new domain — tell me the domain and I will do it in the same pass.
-
-Note: hosting on Vercel is optional. A custom domain can be attached directly in Lovable (Project Settings → Domains) with no second host involved.
+- After the page is live, sign in and click **Claim admin access** to unlock the Setup link.
+- If you want to assign admin to other users later, we can add a user-management UI in a later phase.
