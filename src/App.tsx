@@ -10,6 +10,7 @@ import NewsPage from "@/pages/NewsPage";
 import TrendsPage from "@/pages/TrendsPage";
 import AuthPage from "@/pages/AuthPage";
 import SettingsPage from "@/pages/SettingsPage";
+import OAuthConsent from "@/pages/OAuthConsent";
 // EnvironmentSetupPage kept in codebase but not routed
 import NotFound from "@/pages/NotFound";
 
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/trends" element={<TrendsPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

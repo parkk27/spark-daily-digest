@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Github } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -21,6 +21,11 @@ const TRUST = [
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const rawNext = params.get("next") ?? "";
+  // Only allow same-origin relative paths.
+  const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "";
+  const afterAuth = next || "/settings";
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,8 +33,8 @@ const AuthPage = () => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate("/settings", { replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) navigate(afterAuth, { replace: true });
+  }, [user, loading, navigate, afterAuth]);
 
   const withBusy = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -40,12 +45,15 @@ const AuthPage = () => {
     }
   };
 
+  const returnUrl =
+    window.location.origin + (next ? `/auth?next=${encodeURIComponent(next)}` : "");
+
   const handleSignIn = (e: FormEvent) => {
     e.preventDefault();
     withBusy(async () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return toast.error(error.message);
-      navigate("/settings", { replace: true });
+      navigate(afterAuth, { replace: true });
     });
   };
 
@@ -55,11 +63,11 @@ const AuthPage = () => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: returnUrl },
       });
       if (error) return toast.error(error.message);
       if (!data.session) toast.success("Check your email to confirm your account.");
-      else navigate("/settings", { replace: true });
+      else navigate(afterAuth, { replace: true });
     });
   };
 
@@ -68,7 +76,7 @@ const AuthPage = () => {
     withBusy(async () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: returnUrl },
       });
       if (error) return toast.error(error.message);
       toast.success("Magic link sent — check your inbox.");
@@ -79,7 +87,7 @@ const AuthPage = () => {
     if (!email) return toast.error("Enter your email first.");
     withBusy(async () => {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+        redirectTo: returnUrl,
       });
       if (error) return toast.error(error.message);
       toast.success("Password reset link sent — check your inbox.");
@@ -89,11 +97,11 @@ const AuthPage = () => {
   const handleGoogle = () => {
     withBusy(async () => {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: returnUrl,
       });
       if (result.error) return toast.error("Google sign-in failed.");
       if (result.redirected) return;
-      navigate("/settings", { replace: true });
+      navigate(afterAuth, { replace: true });
     });
   };
 

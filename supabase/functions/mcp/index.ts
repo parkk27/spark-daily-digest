@@ -3,7 +3,7 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { defineMcp } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.26.1";
 
 // src/lib/mcp/tools/get-daily-brief.ts
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.26.1";
@@ -168,11 +168,16 @@ var search_articles_default = defineTool4({
 });
 
 // src/lib/mcp/index.ts
+var projectRef = "dpjzypvarubkomehrwht";
 var mcp_default = defineMcp({
   name: "bigdata-hub-mcp",
   title: "Big Data Intelligence Hub",
   version: "0.1.0",
-  instructions: "Public read-only intelligence tools for the Big Data Intelligence Hub. Use `get_daily_brief` for today's executive summary, `get_topic_trends` for topic momentum, `list_articles` for the latest ingested vendor blog posts, and `search_articles` to find posts by keyword. Data covers Databricks, Apache Spark, Iceberg, Delta Lake, Microsoft Fabric, AWS EMR, BigQuery and Google Cloud.",
+  instructions: "Read-only intelligence tools for the Big Data Intelligence Hub. Use `get_daily_brief` for today's executive summary, `get_topic_trends` for topic momentum, `list_articles` for the latest ingested vendor blog posts, and `search_articles` to find posts by keyword. Data covers Databricks, Apache Spark, Iceberg, Delta Lake, Microsoft Fabric, AWS EMR, BigQuery and Google Cloud.",
+  auth: auth.oauth.issuer({
+    issuer: `https://${projectRef}.supabase.co/auth/v1`,
+    acceptedAudiences: "authenticated"
+  }),
   tools: [get_daily_brief_default, get_topic_trends_default, list_articles_default, search_articles_default]
 });
 
