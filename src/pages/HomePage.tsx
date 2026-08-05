@@ -47,6 +47,16 @@ const HomePage = () => {
     summary: { highlights: [], trends: [], impact: [], topInsight: "" },
     date: new Date().toISOString().split("T")[0],
   };
+  const execIntel = useMemo(
+    () =>
+      buildExecutiveIntelligence(
+        { date, summary },
+        data?.allArticles ?? data?.articles ?? [],
+        trends
+      ),
+    [date, summary, data, trends]
+  );
+
 
   return (
     <div className="container max-w-4xl py-8">
