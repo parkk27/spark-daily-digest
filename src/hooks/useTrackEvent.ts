@@ -10,7 +10,7 @@ export function useTrackEvent() {
       if (!user) return;
       void supabase
         .from("analytics_events")
-        .insert({ user_id: user.id, event, target, metadata })
+        .insert({ user_id: user.id, event, target, metadata } as never)
         .then(({ error }) => {
           if (error) console.warn("analytics", error.message);
         });
