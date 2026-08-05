@@ -22,8 +22,11 @@ function renderText(m: UIMessage) {
 
 const AskBigDataHub = () => {
   const [input, setInput] = useState("");
+  const [mode, setMode] = useState<string>("general");
+  const track = useTrackEvent();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
