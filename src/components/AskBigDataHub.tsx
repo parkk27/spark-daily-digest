@@ -48,9 +48,12 @@ const AskBigDataHub = () => {
   const submit = (text: string) => {
     const t = text.trim();
     if (!t || isLoading) return;
-    sendMessage({ text: t });
+    const framing = MODES.find((m) => m.id === mode)?.framing;
+    sendMessage({ text: framing ? `${framing}\n\nQuestion: ${t}` : t });
+    track("copilot_question", mode, { length: t.length });
     setInput("");
   };
+
 
   return (
     <div className="rounded-lg border border-border bg-card opacity-0 animate-fade-in" style={{ animationDelay: "400ms" }}>
