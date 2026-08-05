@@ -1,0 +1,1 @@
+CREATE POLICY "Users read own events" ON public.analytics_events FOR SELECT TO authenticated USING (auth.uid() = user_id);
