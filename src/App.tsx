@@ -30,6 +30,12 @@ const SourcesPage = lazy(() => import("@/pages/SourcesPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 
+// Public, sample-data demo surfaces (no auth required).
+const PreviewBriefPage = lazy(() => import("@/pages/preview/PreviewBriefPage"));
+const PreviewComparePage = lazy(() => import("@/pages/preview/PreviewComparePage"));
+const PreviewRadarPage = lazy(() => import("@/pages/preview/PreviewRadarPage"));
+const ShareCardPage = lazy(() => import("@/pages/ShareCardPage"));
+
 const queryClient = new QueryClient();
 
 const PageFallback = () => (
