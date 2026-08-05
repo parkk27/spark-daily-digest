@@ -34,6 +34,7 @@ const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 const PreviewBriefPage = lazy(() => import("@/pages/preview/PreviewBriefPage"));
 const PreviewComparePage = lazy(() => import("@/pages/preview/PreviewComparePage"));
 const PreviewRadarPage = lazy(() => import("@/pages/preview/PreviewRadarPage"));
+const CardPage = lazy(() => import("@/pages/CardPage"));
 
 
 const queryClient = new QueryClient();
@@ -85,6 +86,11 @@ const App = () => (
                 path="/preview/radar"
                 element={<Suspense fallback={<PageFallback />}><PreviewRadarPage /></Suspense>}
               />
+              <Route
+                path="/card/:cardId"
+                element={<Suspense fallback={<PageFallback />}><CardPage /></Suspense>}
+              />
+
 
 
               {/* Protected */}
