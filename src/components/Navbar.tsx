@@ -47,6 +47,7 @@ const Navbar = () => {
   const { user, loading } = useAuth();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
   const links = user ? authedLinks : publicLinks;
 
   return (
