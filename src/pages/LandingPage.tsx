@@ -40,14 +40,15 @@ const LandingPage = () => (
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Button asChild size="lg" className="gap-1.5">
-          <Link to="/signup">
-            Create free account <ArrowRight className="h-4 w-4" />
+          <Link to="/preview">
+            See today's brief <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
         <Button asChild size="lg" variant="outline">
-          <Link to="/signin">Sign in</Link>
+          <Link to="/signup">Create free account</Link>
         </Button>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">No sign-up required to explore the demo.</p>
     </section>
 
     <section className="container relative pb-24">

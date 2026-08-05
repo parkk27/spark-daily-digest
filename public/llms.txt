@@ -4,6 +4,9 @@
 
 ## Pages
 
-- [Daily Brief](/): Today's top insight, highlights, emerging trends, and strategic impact.
+- [Sample Daily Brief](/preview): Public demo of the daily executive brief using sample data.
+- [Sample Compare](/preview/compare): Public demo of the competitive intelligence workspace.
+- [Sample Action Radar](/preview/radar): Public demo of prioritized recommendations.
+- [Daily Brief](/dashboard): Today's top insight, highlights, emerging trends, and strategic impact.
 - [News Feed](/news): Latest articles from Databricks, Apache, AWS, Google, and Microsoft, grouped by day.
 - [Ecosystem Trends](/trends): Biggest shift today, fastest growing technologies, vendor momentum, emerging signals, and declining topics.

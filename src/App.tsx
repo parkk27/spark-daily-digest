@@ -30,6 +30,12 @@ const SourcesPage = lazy(() => import("@/pages/SourcesPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 
+// Public, sample-data demo surfaces (no auth required).
+const PreviewBriefPage = lazy(() => import("@/pages/preview/PreviewBriefPage"));
+const PreviewComparePage = lazy(() => import("@/pages/preview/PreviewComparePage"));
+const PreviewRadarPage = lazy(() => import("@/pages/preview/PreviewRadarPage"));
+
+
 const queryClient = new QueryClient();
 
 const PageFallback = () => (
@@ -65,6 +71,21 @@ const App = () => (
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/auth" element={<Navigate to="/signin" replace />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
+              {/* Public preview (sample data) */}
+              <Route
+                path="/preview"
+                element={<Suspense fallback={<PageFallback />}><PreviewBriefPage /></Suspense>}
+              />
+              <Route
+                path="/preview/compare"
+                element={<Suspense fallback={<PageFallback />}><PreviewComparePage /></Suspense>}
+              />
+              <Route
+                path="/preview/radar"
+                element={<Suspense fallback={<PageFallback />}><PreviewRadarPage /></Suspense>}
+              />
+
 
               {/* Protected */}
               <Route path="/dashboard" element={protect(<HomePage />)} />
