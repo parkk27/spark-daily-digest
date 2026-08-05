@@ -1,4 +1,7 @@
 import { ExternalLink, Star } from "lucide-react";
+import BookmarkButton from "@/components/BookmarkButton";
+import ArticleIntelligencePanel from "@/components/news/ArticleIntelligencePanel";
+import { scoreArticle } from "@/lib/decisionIntelligence";
 import { format, parseISO } from "date-fns";
 import SourceBadge from "@/components/SourceBadge";
 import { useSparkData } from "@/hooks/useSparkData";
