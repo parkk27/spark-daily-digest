@@ -1,11 +1,14 @@
 import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ShareCardData } from "@/lib/shareCard";
+import { SITE_URL } from "@/config";
 
 /**
  * 1200x630-proportioned shareable intelligence card.
  * Scales to its container width; used in the share dialog and on /card/:cardId.
  */
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
+
 const TrendCard = ({ data, className }: { data: ShareCardData; className?: string }) => (
   <div
     className={cn(
@@ -37,7 +40,7 @@ const TrendCard = ({ data, className }: { data: ShareCardData; className?: strin
       <span className="text-[2.1cqw] text-muted-foreground">
         {data.sources} source{data.sources === 1 ? "" : "s"}
       </span>
-      <span className="ml-auto text-[2.1cqw] text-muted-foreground">bigdata-hub.lovable.app</span>
+      <span className="ml-auto text-[2.1cqw] text-muted-foreground">{SITE_HOST}</span>
     </div>
   </div>
 );

@@ -8,6 +8,7 @@ import { useSparkData } from "@/hooks/useSparkData";
 import { useWatchlist } from "@/hooks/usePersonalization";
 import { useAuth } from "@/hooks/useAuth";
 import SeoHead from "@/components/SeoHead";
+import { siteUrl } from "@/config";
 
 const NewsPage = () => {
   const { data, isLoading } = useSparkData();
@@ -41,7 +42,7 @@ const NewsPage = () => {
           "@context": "https://schema.org",
           "@type": "CollectionPage",
           name: "Big Data News Feed",
-          url: "https://bigdata-hub.lovable.app/news",
+          url: siteUrl("/news"),
           description: "Curated daily news from the big data ecosystem.",
         }}
       />

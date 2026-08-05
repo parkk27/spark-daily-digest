@@ -14,6 +14,7 @@ import {
 import BiggestShift from "@/components/trends/BiggestShift";
 import TrendSection from "@/components/trends/TrendSection";
 import SeoHead from "@/components/SeoHead";
+import { siteUrl } from "@/config";
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
@@ -56,7 +57,7 @@ const TrendsPage = () => {
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "Big Data Ecosystem Trends",
-          url: "https://bigdata-hub.lovable.app/trends",
+          url: siteUrl("/trends"),
           description: "Strategic trend analysis across Spark, Iceberg, Delta, Fabric, EMR, and BigQuery.",
         }}
       />
