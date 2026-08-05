@@ -3,6 +3,30 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, Send, Loader2, RotateCcw } from "lucide-react";
+import { useTrackEvent } from "@/hooks/useTrackEvent";
+import { cn } from "@/lib/utils";
+
+const MODES: { id: string; label: string; framing?: string }[] = [
+  { id: "general", label: "General" },
+  {
+    id: "competitive",
+    label: "Competitive",
+    framing:
+      "Answer as a competitive analyst: compare vendor positions, name differentiators, and state where Microsoft Fabric Spark stands.",
+  },
+  {
+    id: "strategic",
+    label: "Strategic",
+    framing:
+      "Answer as a strategy advisor: focus on market direction, second-order effects, and the two-quarter outlook.",
+  },
+  {
+    id: "decision",
+    label: "Decision support",
+    framing:
+      "Answer as a decision-support analyst: give a recommendation, the owning role, the timeline, and the evidence behind it.",
+  },
+];
 
 const SUGGESTIONS = [
   "What changed in Spark this week?",
@@ -11,6 +35,7 @@ const SUGGESTIONS = [
   "Summarize major AWS EMR developments",
   "Which vendor is innovating fastest?",
 ];
+
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/spark-copilot`;
 
