@@ -1,6 +1,5 @@
 import { Helmet } from "react-helmet-async";
-
-const SITE = "https://bigdata-hub.lovable.app";
+import { siteUrl } from "@/config";
 
 interface SeoHeadProps {
   title: string;
@@ -11,7 +10,7 @@ interface SeoHeadProps {
 }
 
 const SeoHead = ({ title, description, path, jsonLd, noindex }: SeoHeadProps) => {
-  const url = `${SITE}${path}`;
+  const url = siteUrl(path);
   const lds = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
   return (
     <Helmet>
@@ -35,4 +34,3 @@ const SeoHead = ({ title, description, path, jsonLd, noindex }: SeoHeadProps) =>
 };
 
 export default SeoHead;
-
