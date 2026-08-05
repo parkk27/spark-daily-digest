@@ -3,6 +3,30 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, Send, Loader2, RotateCcw } from "lucide-react";
+import { useTrackEvent } from "@/hooks/useTrackEvent";
+import { cn } from "@/lib/utils";
+
+const MODES: { id: string; label: string; framing?: string }[] = [
+  { id: "general", label: "General" },
+  {
+    id: "competitive",
+    label: "Competitive",
+    framing:
+      "Answer as a competitive analyst: compare vendor positions, name differentiators, and state where Microsoft Fabric Spark stands.",
+  },
+  {
+    id: "strategic",
+    label: "Strategic",
+    framing:
+      "Answer as a strategy advisor: focus on market direction, second-order effects, and the two-quarter outlook.",
+  },
+  {
+    id: "decision",
+    label: "Decision support",
+    framing:
+      "Answer as a decision-support analyst: give a recommendation, the owning role, the timeline, and the evidence behind it.",
+  },
+];
 
 const SUGGESTIONS = [
   "What changed in Spark this week?",
@@ -11,6 +35,7 @@ const SUGGESTIONS = [
   "Summarize major AWS EMR developments",
   "Which vendor is innovating fastest?",
 ];
+
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/spark-copilot`;
 
@@ -22,8 +47,11 @@ function renderText(m: UIMessage) {
 
 const AskBigDataHub = () => {
   const [input, setInput] = useState("");
+  const [mode, setMode] = useState<string>("general");
+  const track = useTrackEvent();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
@@ -48,9 +76,12 @@ const AskBigDataHub = () => {
   const submit = (text: string) => {
     const t = text.trim();
     if (!t || isLoading) return;
-    sendMessage({ text: t });
+    const framing = MODES.find((m) => m.id === mode)?.framing;
+    sendMessage({ text: framing ? `${framing}\n\nQuestion: ${t}` : t });
+    track("copilot_question", mode, { length: t.length });
     setInput("");
   };
+
 
   return (
     <div className="rounded-lg border border-border bg-card opacity-0 animate-fade-in" style={{ animationDelay: "400ms" }}>
@@ -71,6 +102,26 @@ const AskBigDataHub = () => {
           </button>
         )}
       </div>
+
+      <div className="flex flex-wrap gap-1.5 border-b border-border px-6 py-3">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            aria-pressed={mode === m.id}
+            className={cn(
+              "rounded-md border px-2.5 py-1 text-xs transition-colors",
+              mode === m.id
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:bg-secondary/50"
+            )}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+
 
       <div className="px-6 py-5">
         {messages.length === 0 ? (

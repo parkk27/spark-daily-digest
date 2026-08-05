@@ -1,8 +1,12 @@
+import { useMemo } from "react";
 import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useSparkData } from "@/hooks/useSparkData";
 import AskBigDataHub from "@/components/AskBigDataHub";
+import ExecutiveSummaryCard from "@/components/ExecutiveSummaryCard";
+import { buildExecutiveIntelligence } from "@/lib/executive";
 import SeoHead from "@/components/SeoHead";
+
 
 
 const SectionCard = ({
@@ -43,6 +47,16 @@ const HomePage = () => {
     summary: { highlights: [], trends: [], impact: [], topInsight: "" },
     date: new Date().toISOString().split("T")[0],
   };
+  const execIntel = useMemo(
+    () =>
+      buildExecutiveIntelligence(
+        { date, summary },
+        data?.allArticles ?? data?.articles ?? [],
+        trends
+      ),
+    [date, summary, data, trends]
+  );
+
 
   return (
     <div className="container max-w-4xl py-8">
@@ -94,6 +108,8 @@ const HomePage = () => {
         </div>
       ) : (
         <div className="space-y-6">
+          <ExecutiveSummaryCard intel={execIntel} />
+
           {/* Top Insight of the Day */}
           {summary.topInsight && (
             <div

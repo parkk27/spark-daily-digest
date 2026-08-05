@@ -14,12 +14,85 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          metadata: Json
+          target: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          metadata?: Json
+          target?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          target?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          payload: Json
+          ref_id: string
+          source: string | null
+          title: string
+          url: string | null
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string | null
+          payload?: Json
+          ref_id: string
+          source?: string | null
+          title: string
+          url?: string | null
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          payload?: Json
+          ref_id?: string
+          source?: string | null
+          title?: string
+          url?: string | null
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           display_name: string | null
           id: string
+          role_focus: string
           updated_at: string
         }
         Insert: {
@@ -27,6 +100,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          role_focus?: string
           updated_at?: string
         }
         Update: {
@@ -34,7 +108,103 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          role_focus?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      recommendation_status: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          recommendation_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          recommendation_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          recommendation_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_status_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendations: {
+        Row: {
+          confidence: number
+          created_at: string
+          date: string
+          due_date: string | null
+          evidence: Json
+          evidence_count: number
+          id: string
+          owner: string
+          priority: string
+          rationale: string | null
+          related_technologies: string[]
+          related_vendor: string | null
+          section: string
+          summary: string
+          title: string
+          workspace_id: string | null
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          date?: string
+          due_date?: string | null
+          evidence?: Json
+          evidence_count?: number
+          id?: string
+          owner: string
+          priority: string
+          rationale?: string | null
+          related_technologies?: string[]
+          related_vendor?: string | null
+          section: string
+          summary: string
+          title: string
+          workspace_id?: string | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          date?: string
+          due_date?: string | null
+          evidence?: Json
+          evidence_count?: number
+          id?: string
+          owner?: string
+          priority?: string
+          rationale?: string | null
+          related_technologies?: string[]
+          related_vendor?: string | null
+          section?: string
+          summary?: string
+          title?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }

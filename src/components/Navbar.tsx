@@ -1,11 +1,30 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Zap, LayoutDashboard, Newspaper, TrendingUp, BarChart3, Sparkles, Settings, LogOut, LogIn, Info, Home } from "lucide-react";
+import {
+  Zap,
+  LayoutDashboard,
+  Newspaper,
+  TrendingUp,
+  BarChart3,
+  Sparkles,
+  Settings,
+  LogOut,
+  LogIn,
+  Info,
+  Home,
+  Radar,
+  Bookmark,
+  Database,
+  UserRound,
+  Activity,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -13,9 +32,11 @@ const authedLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/news", label: "News", icon: Newspaper },
   { to: "/trends", label: "Trends", icon: TrendingUp },
+  { to: "/radar", label: "Radar", icon: Radar },
   { to: "/compare", label: "Compare", icon: BarChart3 },
   { to: "/copilot", label: "Copilot", icon: Sparkles },
 ];
+
 
 const publicLinks = [
   { to: "/", label: "Home", icon: Home },
@@ -26,6 +47,7 @@ const Navbar = () => {
   const { user, loading } = useAuth();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
   const links = user ? authedLinks : publicLinks;
 
   return (
@@ -71,9 +93,26 @@ const Navbar = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem disabled className="truncate text-xs">{user.email}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/bookmarks")}>
+                  <Bookmark className="mr-2 h-4 w-4" /> Bookmarks
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/sources")}>
+                  <Database className="mr-2 h-4 w-4" /> Sources
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <UserRound className="mr-2 h-4 w-4" /> Profile
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/analytics")}>
+                    <Activity className="mr-2 h-4 w-4" /> Usage analytics
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onClick={async () => {
                     await signOut();
