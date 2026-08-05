@@ -24,6 +24,11 @@ const TrendsPage = lazy(() => import("@/pages/TrendsPage"));
 const ComparisonPage = lazy(() => import("@/pages/ComparisonPage"));
 const CopilotPage = lazy(() => import("@/pages/CopilotPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const ActionRadarPage = lazy(() => import("@/pages/ActionRadarPage"));
+const BookmarksPage = lazy(() => import("@/pages/BookmarksPage"));
+const SourcesPage = lazy(() => import("@/pages/SourcesPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 
 const queryClient = new QueryClient();
 
@@ -68,6 +73,11 @@ const App = () => (
               <Route path="/compare" element={protect(<ComparisonPage />)} />
               <Route path="/copilot" element={protect(<CopilotPage />)} />
               <Route path="/settings" element={protect(<SettingsPage />)} />
+              <Route path="/radar" element={protect(<ActionRadarPage />)} />
+              <Route path="/bookmarks" element={protect(<BookmarksPage />)} />
+              <Route path="/sources" element={protect(<SourcesPage />)} />
+              <Route path="/profile" element={protect(<ProfilePage />)} />
+              <Route path="/analytics" element={protect(<AnalyticsPage />)} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
