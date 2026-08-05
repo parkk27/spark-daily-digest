@@ -92,9 +92,26 @@ const Navbar = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem disabled className="truncate text-xs">{user.email}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/bookmarks")}>
+                  <Bookmark className="mr-2 h-4 w-4" /> Bookmarks
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/sources")}>
+                  <Database className="mr-2 h-4 w-4" /> Sources
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <UserRound className="mr-2 h-4 w-4" /> Profile
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/analytics")}>
+                    <Activity className="mr-2 h-4 w-4" /> Usage analytics
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onClick={async () => {
                     await signOut();
