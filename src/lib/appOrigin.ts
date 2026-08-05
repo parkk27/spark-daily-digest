@@ -8,15 +8,24 @@
  */
 const CONFIGURED = (import.meta.env.VITE_APP_URL as string | undefined)?.trim();
 
-const isLocal = () =>
-  typeof window !== "undefined" &&
-  /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+/** Preview/dev hosts keep their own origin so testing there still works. */
+const isDevHost = () => {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return (
+    /^(localhost|127\.0\.0\.1|\[::1\])$/.test(h) ||
+    h.includes("lovableproject.com") ||
+    h.startsWith("id-preview") ||
+    h.startsWith("preview--")
+  );
+};
 
 export function appOrigin(): string {
   if (typeof window === "undefined") return CONFIGURED ?? "";
-  if (isLocal() || !CONFIGURED) return window.location.origin;
+  if (isDevHost() || !CONFIGURED) return window.location.origin;
   return CONFIGURED.replace(/\/+$/, "");
 }
+
 
 /** Builds an absolute URL on the canonical origin from a same-origin path. */
 export function appUrl(path: string): string {
