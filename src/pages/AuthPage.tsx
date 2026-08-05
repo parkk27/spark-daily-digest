@@ -13,6 +13,8 @@ import SeoHead from "@/components/SeoHead";
 import AuthStoryPanel from "@/components/auth/AuthStoryPanel";
 import AuthFooterLinks from "@/components/auth/AuthFooterLinks";
 import { AUTH_MESSAGES, authErrorCode, friendlyAuthError, isValidEmail } from "@/lib/authErrors";
+import { appOrigin } from "@/lib/appOrigin";
+import { authLog, authLogError, clearCallbackError, readCallbackError } from "@/lib/authLog";
 
 const TRUST = [
   "Public information only",
@@ -23,13 +25,6 @@ const TRUST = [
 const RESEND_COOLDOWN = 30;
 const NEXT_KEY = "bdih:auth:next";
 
-/** Fire-and-forget auth analytics (works signed-out; ignores failures). */
-const track = (event: string, metadata: Record<string, unknown> = {}) => {
-  void supabase
-    .from("analytics_events")
-    .insert({ event, target: "auth", metadata } as never)
-    .then(() => undefined, () => undefined);
-};
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -53,14 +48,26 @@ const AuthPage = () => {
       const stored = sessionStorage.getItem(NEXT_KEY);
       sessionStorage.removeItem(NEXT_KEY);
       const dest = stored && /^\/(?!\/)/.test(stored) ? stored : afterAuth;
-      track("auth_session_restored", { dest });
+      authLog("session_restored", { dest });
       navigate(dest, { replace: true });
     }
   }, [user, loading, navigate, afterAuth]);
 
   useEffect(() => {
-    if (wasExpired) track("auth_session_expired");
+    if (wasExpired) authLog("session_expired");
   }, [wasExpired]);
+
+  // Surface failed magic-link callbacks (expired or already-used links).
+  useEffect(() => {
+    const cb = readCallbackError();
+    if (!cb) return;
+    authLogError("oauth_callback", cb, { code: cb.code });
+    const expiredLink = /expired|otp_expired|invalid|access_denied/i.test(
+      `${cb.code} ${cb.description}`,
+    );
+    setError(expiredLink ? AUTH_MESSAGES.expiredLink : AUTH_MESSAGES.callbackFailed);
+    clearCallbackError();
+  }, []);
 
   useEffect(() => {
     if (!sentTo) emailRef.current?.focus();
@@ -72,13 +79,15 @@ const AuthPage = () => {
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  // Always build redirects on the canonical origin so they match the allow-list.
   const returnUrl =
-    window.location.origin + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
+    appOrigin() + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
 
   const sendLink = async (address: string) => {
     if (busy) return; // prevent duplicate requests
     setBusy(true);
     setError(null);
+    authLog("otp_request", { returnUrl });
     try {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: address,
@@ -86,12 +95,12 @@ const AuthPage = () => {
       });
       if (err) {
         setError(friendlyAuthError(err));
-        track("auth_error", { method: "magic_link", reason: authErrorCode(err) });
+        authLogError("otp_failure", err, { reason: authErrorCode(err) });
         return;
       }
       setSentTo(address);
       setCooldown(RESEND_COOLDOWN);
-      track("auth_magic_link_sent");
+      authLog("otp_success");
       toast.success("Sign-in link sent — check your inbox.");
     } finally {
       setBusy(false);
@@ -112,27 +121,31 @@ const AuthPage = () => {
     if (busy) return;
     setBusy(true);
     setError(null);
-    track("auth_oauth_started", { provider: "google" });
+    authLog("oauth_start", { provider: "google" });
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: appOrigin(),
       });
       if (result.error) {
         setError(friendlyAuthError(result.error));
-        track("auth_error", { method: "google", reason: authErrorCode(result.error) });
+        authLogError("oauth_callback", result.error, {
+          provider: "google",
+          reason: authErrorCode(result.error),
+        });
         return;
       }
       if (result.redirected) return; // browser navigates to Google
-      track("auth_oauth_success", { provider: "google" });
+      authLog("oauth_callback", { provider: "google", status: "success" });
       navigate(afterAuth, { replace: true });
     } catch (err) {
       setError(friendlyAuthError(err));
-      track("auth_error", { method: "google", reason: authErrorCode(err) });
+      authLogError("oauth_callback", err, { provider: "google", reason: authErrorCode(err) });
     } finally {
       setBusy(false);
     }
   };
+
 
   return (
     <div className="relative overflow-hidden">

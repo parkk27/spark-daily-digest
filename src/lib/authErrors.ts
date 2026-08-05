@@ -8,7 +8,10 @@ export const AUTH_MESSAGES = {
   rateLimited: "Too many attempts. Please wait a moment and try again.",
   invalidEmail: "Enter a valid email address.",
   expired: "Your session has expired. Please sign in again.",
+  expiredLink:
+    "That sign-in link has expired or was already used. Request a fresh link below.",
 } as const;
+
 
 export function friendlyAuthError(error: unknown): string {
   const raw =
