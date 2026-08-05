@@ -108,6 +108,8 @@ const HomePage = () => {
         </div>
       ) : (
         <div className="space-y-6">
+          <ExecutiveSummaryCard intel={execIntel} />
+
           {/* Top Insight of the Day */}
           {summary.topInsight && (
             <div
