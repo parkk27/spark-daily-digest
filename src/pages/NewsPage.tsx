@@ -88,32 +88,53 @@ const NewsPage = () => {
               </h2>
               <div className="space-y-3">
                 {grouped[date].map((article, i) => (
-                  <a
+                  <article
                     key={i}
-                    href={article.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-start gap-4 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-secondary/30"
+                    className="group rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <SourceBadge source={article.source} />
-                        {article.tags.map((tag) => (
-                          <span key={tag} className="text-xs text-muted-foreground">
-                            #{tag}
-                          </span>
-                        ))}
+                    <div className="flex items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <SourceBadge source={article.source} />
+                          {article.tags.map((tag) => (
+                            <span key={tag} className="text-xs text-muted-foreground">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                        <a
+                          href={article.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mb-1 block text-sm font-semibold text-foreground transition-colors hover:text-primary"
+                        >
+                          {article.title}
+                        </a>
+                        <p className="text-sm leading-relaxed text-secondary-foreground line-clamp-2">
+                          {article.summary}
+                        </p>
                       </div>
-                      <h3 className="mb-1 text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {article.title}
-                      </h3>
-                      <p className="text-sm leading-relaxed text-secondary-foreground line-clamp-2">
-                        {article.summary}
-                      </p>
+                      <BookmarkButton
+                        kind="article"
+                        refId={article.link}
+                        title={article.title}
+                        url={article.link}
+                        source={article.source}
+                      />
+                      <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Open: ${article.title}`}
+                        className="mt-1.5 shrink-0 text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
                     </div>
-                    <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </a>
+                    <ArticleIntelligencePanel intel={scoreArticle(article)} />
+                  </article>
                 ))}
+
               </div>
             </section>
           ))}
