@@ -9,7 +9,7 @@ import type { ShareCardData } from "@/lib/shareCard";
 const TrendCard = ({ data, className }: { data: ShareCardData; className?: string }) => (
   <div
     className={cn(
-      "relative flex aspect-[1200/630] w-full flex-col justify-between overflow-hidden rounded-xl border border-border bg-card p-[5%]",
+      "relative flex aspect-[1200/630] w-full flex-col justify-between overflow-hidden rounded-xl border border-border bg-card p-[5%] [container-type:inline-size]",
       className
     )}
   >
