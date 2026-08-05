@@ -13,6 +13,8 @@ import SeoHead from "@/components/SeoHead";
 import AuthStoryPanel from "@/components/auth/AuthStoryPanel";
 import AuthFooterLinks from "@/components/auth/AuthFooterLinks";
 import { AUTH_MESSAGES, authErrorCode, friendlyAuthError, isValidEmail } from "@/lib/authErrors";
+import { appOrigin } from "@/lib/appOrigin";
+import { authLog, authLogError, clearCallbackError, readCallbackError } from "@/lib/authLog";
 
 const TRUST = [
   "Public information only",
@@ -23,13 +25,6 @@ const TRUST = [
 const RESEND_COOLDOWN = 30;
 const NEXT_KEY = "bdih:auth:next";
 
-/** Fire-and-forget auth analytics (works signed-out; ignores failures). */
-const track = (event: string, metadata: Record<string, unknown> = {}) => {
-  void supabase
-    .from("analytics_events")
-    .insert({ event, target: "auth", metadata } as never)
-    .then(() => undefined, () => undefined);
-};
 
 const AuthPage = () => {
   const navigate = useNavigate();
