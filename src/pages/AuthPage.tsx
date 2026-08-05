@@ -166,9 +166,9 @@ const AuthPage = () => {
                 <div className="animate-fade-in">
                   <div className="flex items-center gap-2">
                     <MailCheck className="h-5 w-5 text-status-growing" aria-hidden="true" />
-                    <h1 className="text-lg font-semibold tracking-tight text-foreground">
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
                       Check your email
-                    </h1>
+                    </h2>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     We've sent a secure sign-in link to{" "}
@@ -202,9 +202,9 @@ const AuthPage = () => {
                 </div>
               ) : (
                 <>
-                  <h1 className="text-lg font-semibold tracking-tight text-foreground">
+                  <h2 className="text-lg font-semibold tracking-tight text-foreground">
                     Sign in to Big Data Intelligence Hub
-                  </h1>
+                  </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Enter your email and we'll send a secure sign-in link — no password needed.
                   </p>
