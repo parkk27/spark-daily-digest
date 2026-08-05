@@ -1,11 +1,30 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Zap, LayoutDashboard, Newspaper, TrendingUp, BarChart3, Sparkles, Settings, LogOut, LogIn, Info, Home } from "lucide-react";
+import {
+  Zap,
+  LayoutDashboard,
+  Newspaper,
+  TrendingUp,
+  BarChart3,
+  Sparkles,
+  Settings,
+  LogOut,
+  LogIn,
+  Info,
+  Home,
+  Radar,
+  Bookmark,
+  Database,
+  UserRound,
+  Activity,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -13,9 +32,11 @@ const authedLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/news", label: "News", icon: Newspaper },
   { to: "/trends", label: "Trends", icon: TrendingUp },
+  { to: "/radar", label: "Radar", icon: Radar },
   { to: "/compare", label: "Compare", icon: BarChart3 },
   { to: "/copilot", label: "Copilot", icon: Sparkles },
 ];
+
 
 const publicLinks = [
   { to: "/", label: "Home", icon: Home },
