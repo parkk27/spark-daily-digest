@@ -35,6 +35,25 @@ const TrendRow = ({ trend, why, loading }: TrendRowProps) => (
         <ArrowRight className="h-3 w-3" />
         <span className="font-medium text-foreground">{trend.today}</span>
         {directionLabel(trend)}
+        <ShareCardDialog
+          label=""
+          data={{
+            title: trend.topic,
+            why:
+              why ??
+              `Mentions moved from ${trend.yesterday} to ${trend.today} across tracked data platform sources.`,
+            status:
+              trend.status === "new"
+                ? "New signal"
+                : trend.change > 0
+                  ? `Growing +${trend.change}`
+                  : trend.change < 0
+                    ? `Declining ${trend.change}`
+                    : "Stable",
+            sources: trend.today,
+            eyebrow: "Ecosystem trend",
+          }}
+        />
       </div>
     </div>
     {loading ? (
