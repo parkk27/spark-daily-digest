@@ -17,7 +17,7 @@ import {
 const CATEGORIES: Category[] = ["performance", "cost", "ai", "governance"];
 const VENDORS: Vendor[] = ["databricks", "bigquery", "emr", "snowflake", "spark"];
 
-const ComparisonPage = () => {
+const ComparisonPage = ({ preview = false }: { preview?: boolean }) => {
   const [category, setCategory] = useState<Category | "all">("all");
   const [vendor, setVendor] = useState<Vendor | "all">("all");
 
@@ -41,8 +41,8 @@ const ComparisonPage = () => {
       <SeoHead
         title="Competitive Intelligence Workspace | Big Data Intelligence Hub"
         description="Benchmark Microsoft Fabric Spark against Databricks, BigQuery, AWS EMR, Snowflake and the Apache Spark ecosystem on current capabilities, customer impact and recommended actions."
-        path="/compare"
-        noindex
+        path={preview ? "/preview/compare" : "/compare"}
+        noindex={!preview}
       />
 
       <header className="mb-6">
