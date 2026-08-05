@@ -13,7 +13,7 @@ import SeoHead from "@/components/SeoHead";
 import AuthStoryPanel from "@/components/auth/AuthStoryPanel";
 import AuthFooterLinks from "@/components/auth/AuthFooterLinks";
 import { AUTH_MESSAGES, authErrorCode, friendlyAuthError, isValidEmail } from "@/lib/authErrors";
-import { appOrigin } from "@/lib/appOrigin";
+import { APP_URL, authCallbackUrl } from "@/config";
 import { authLog, authLogError, clearCallbackError, readCallbackError } from "@/lib/authLog";
 
 const TRUST = [
@@ -80,8 +80,7 @@ const AuthPage = () => {
   }, [cooldown]);
 
   // Always build redirects on the canonical origin so they match the allow-list.
-  const returnUrl =
-    appOrigin() + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
+  const returnUrl = authCallbackUrl(next);
 
   const sendLink = async (address: string) => {
     if (busy) return; // prevent duplicate requests
@@ -125,7 +124,7 @@ const AuthPage = () => {
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: appOrigin(),
+        redirect_uri: APP_URL,
       });
       if (result.error) {
         setError(friendlyAuthError(result.error));

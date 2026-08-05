@@ -6,6 +6,7 @@ import AskBigDataHub from "@/components/AskBigDataHub";
 import ExecutiveSummaryCard from "@/components/ExecutiveSummaryCard";
 import { buildExecutiveIntelligence } from "@/lib/executive";
 import SeoHead from "@/components/SeoHead";
+import { siteUrl } from "@/config";
 
 
 
@@ -69,13 +70,13 @@ const HomePage = () => {
             "@context": "https://schema.org",
             "@type": "WebSite",
             name: "Big Data Intelligence Hub",
-            url: "https://bigdata-hub.lovable.app/",
+            url: siteUrl("/"),
           },
           {
             "@context": "https://schema.org",
             "@type": "Organization",
             name: "Big Data Intelligence Hub",
-            url: "https://bigdata-hub.lovable.app/",
+            url: siteUrl("/"),
           },
         ]}
       />

@@ -11,7 +11,7 @@ export interface ShareCardData {
   eyebrow?: string;
 }
 
-const SITE = "https://bigdata-hub.lovable.app";
+import { siteUrl } from "@/config";
 
 const toBase64Url = (s: string) =>
   btoa(String.fromCharCode(...new TextEncoder().encode(s)))
@@ -55,4 +55,4 @@ export const cardSlug = (title: string) =>
     .slice(0, 60) || "signal";
 
 export const buildShareUrl = (data: ShareCardData) =>
-  `${SITE}/card/${cardSlug(data.title)}?d=${encodeCard(data)}`;
+  `${siteUrl("/card")}/${cardSlug(data.title)}?d=${encodeCard(data)}`;
