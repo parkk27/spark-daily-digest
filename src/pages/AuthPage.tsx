@@ -1,17 +1,18 @@
-import { useState, useEffect, type FormEvent } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Check, Github } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { AlertCircle, ArrowLeft, Check, Loader2, MailCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import SeoHead from "@/components/SeoHead";
 import AuthStoryPanel from "@/components/auth/AuthStoryPanel";
+import AuthFooterLinks from "@/components/auth/AuthFooterLinks";
+import { AUTH_MESSAGES, authErrorCode, friendlyAuthError, isValidEmail } from "@/lib/authErrors";
 
 const TRUST = [
   "Public information only",
@@ -19,107 +20,126 @@ const TRUST = [
   "Secure authentication on our managed backend",
 ];
 
+const RESEND_COOLDOWN = 30;
+const NEXT_KEY = "bdih:auth:next";
+
+/** Fire-and-forget auth analytics (works signed-out; ignores failures). */
+const track = (event: string, metadata: Record<string, unknown> = {}) => {
+  void supabase
+    .from("analytics_events")
+    .insert({ event, target: "auth", metadata } as never)
+    .then(() => undefined, () => undefined);
+};
+
 const AuthPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [params] = useSearchParams();
   const rawNext = params.get("next") ?? "";
-  // Only allow same-origin relative paths.
   const next = /^\/(?!\/)/.test(rawNext) ? rawNext : "";
   const afterAuth = next || "/dashboard";
-  const isSignup = location.pathname === "/signup";
+  const wasExpired = params.get("expired") === "1";
   const { user, loading } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
-  const [busy, setBusy] = useState(false);
 
+  const [email, setEmail] = useState("");
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  // Restore session -> skip the sign-in page entirely.
   useEffect(() => {
-    if (!loading && user) navigate(afterAuth, { replace: true });
+    if (!loading && user) {
+      const stored = sessionStorage.getItem(NEXT_KEY);
+      sessionStorage.removeItem(NEXT_KEY);
+      const dest = stored && /^\/(?!\/)/.test(stored) ? stored : afterAuth;
+      track("auth_session_restored", { dest });
+      navigate(dest, { replace: true });
+    }
   }, [user, loading, navigate, afterAuth]);
 
-  const withBusy = async (fn: () => Promise<unknown>) => {
+  useEffect(() => {
+    if (wasExpired) track("auth_session_expired");
+  }, [wasExpired]);
+
+  useEffect(() => {
+    if (!sentTo) emailRef.current?.focus();
+  }, [sentTo]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const returnUrl =
+    window.location.origin + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
+
+  const sendLink = async (address: string) => {
+    if (busy) return; // prevent duplicate requests
     setBusy(true);
+    setError(null);
     try {
-      await fn();
+      const { error: err } = await supabase.auth.signInWithOtp({
+        email: address,
+        options: { emailRedirectTo: returnUrl },
+      });
+      if (err) {
+        setError(friendlyAuthError(err));
+        track("auth_error", { method: "magic_link", reason: authErrorCode(err) });
+        return;
+      }
+      setSentTo(address);
+      setCooldown(RESEND_COOLDOWN);
+      track("auth_magic_link_sent");
+      toast.success("Sign-in link sent — check your inbox.");
     } finally {
       setBusy(false);
     }
   };
 
-  const returnUrl =
-    window.location.origin + (next ? `/signin?next=${encodeURIComponent(next)}` : "/signin");
-
-
-  const handleSignIn = (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    withBusy(async () => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return toast.error(error.message);
+    const address = email.trim();
+    if (!isValidEmail(address)) {
+      setError(AUTH_MESSAGES.invalidEmail);
+      return;
+    }
+    void sendLink(address);
+  };
+
+  const handleGoogle = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    track("auth_oauth_started", { provider: "google" });
+    try {
+      if (next) sessionStorage.setItem(NEXT_KEY, next);
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setError(friendlyAuthError(result.error));
+        track("auth_error", { method: "google", reason: authErrorCode(result.error) });
+        return;
+      }
+      if (result.redirected) return; // browser navigates to Google
+      track("auth_oauth_success", { provider: "google" });
       navigate(afterAuth, { replace: true });
-    });
+    } catch (err) {
+      setError(friendlyAuthError(err));
+      track("auth_error", { method: "google", reason: authErrorCode(err) });
+    } finally {
+      setBusy(false);
+    }
   };
-
-  const handleSignUp = (e: FormEvent) => {
-    e.preventDefault();
-    withBusy(async () => {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: returnUrl },
-      });
-      if (error) return toast.error(error.message);
-      if (!data.session) toast.success("Check your email to confirm your account.");
-      else navigate(afterAuth, { replace: true });
-    });
-  };
-
-  const handleMagicLink = () => {
-    if (!email) return toast.error("Enter your email first.");
-    withBusy(async () => {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: returnUrl },
-      });
-      if (error) return toast.error(error.message);
-      toast.success("Magic link sent — check your inbox.");
-    });
-  };
-
-  const handleForgotPassword = () => {
-    if (!email) return toast.error("Enter your email first.");
-    withBusy(async () => {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: returnUrl,
-      });
-      if (error) return toast.error(error.message);
-      toast.success("Password reset link sent — check your inbox.");
-    });
-  };
-
-  const handleGoogle = () => {
-    withBusy(async () => {
-      // Standard backend OAuth: works on any host (Lovable, Vercel, custom domains).
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: returnUrl },
-      });
-      if (error) return toast.error(error.message || "Google sign-in failed.");
-      // Browser redirects to Google from here.
-    });
-  };
-
 
   return (
     <div className="relative overflow-hidden">
       <SeoHead
-        title={
-          isSignup
-            ? "Create account — Big Data Intelligence Hub"
-            : "Sign in — Big Data Intelligence Hub"
-        }
+        title="Sign in — Big Data Intelligence Hub"
         description="Sign in to Big Data Intelligence Hub for daily executive briefings, trend momentum and the AI copilot."
-        path={isSignup ? "/signup" : "/signin"}
+        path="/signin"
       />
       <div
         aria-hidden="true"
@@ -131,100 +151,134 @@ const AuthPage = () => {
         <div className="order-1 lg:order-2 lg:col-span-2">
           <div className="lg:sticky lg:top-20">
             <div className="animate-fade-in rounded-2xl border border-border/70 bg-card/70 p-6 shadow-xl backdrop-blur-md">
-              {next && (
+              {wasExpired && (
+                <div className="mb-4 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-foreground">
+                  {AUTH_MESSAGES.expired}
+                </div>
+              )}
+              {next && !wasExpired && (
                 <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground">
                   Please sign in to access Big Data Intelligence Hub.
                 </div>
               )}
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                {isSignup ? "Create your account" : "Welcome back"}
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Sign in to unlock the dashboard, news, trends and the copilot.
-              </p>
 
+              {sentTo ? (
+                <div className="animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <MailCheck className="h-5 w-5 text-status-growing" aria-hidden="true" />
+                    <h1 className="text-lg font-semibold tracking-tight text-foreground">
+                      Check your email
+                    </h1>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    We've sent a secure sign-in link to{" "}
+                    <span className="font-medium text-foreground">{sentTo}</span>.
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    The link expires in 15 minutes.
+                  </p>
 
-              <Tabs defaultValue={isSignup ? "signup" : "signin"} className="mt-5">
-
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="signin">Sign in</TabsTrigger>
-                  <TabsTrigger value="signup">Sign up</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="signin">
-                  <form onSubmit={handleSignIn} className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="remember"
-                          checked={remember}
-                          onCheckedChange={(v) => setRemember(v === true)}
-                        />
-                        <Label htmlFor="remember" className="text-xs font-normal text-muted-foreground">
-                          Remember me
-                        </Label>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleForgotPassword}
-                        disabled={busy}
-                        className="text-xs text-primary underline-offset-4 transition-colors hover:underline disabled:opacity-50"
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={busy}>Sign in</Button>
-                  </form>
-                </TabsContent>
-
-                <TabsContent value="signup">
-                  <form onSubmit={handleSignUp} className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email-up">Email</Label>
-                      <Input id="email-up" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password-up">Password</Label>
-                      <Input id="password-up" type="password" autoComplete="new-password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={busy}>Create account</Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
-
-              <div className="my-5 flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">or</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              <div className="space-y-2.5">
-                <Button variant="outline" className="w-full" onClick={handleMagicLink} disabled={busy}>
-                  Email me a magic link
-                </Button>
-                <Button variant="secondary" className="w-full" onClick={handleGoogle} disabled={busy}>
-                  Continue with Google
-                </Button>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <Button variant="outline" className="w-full" disabled title="Coming soon">
-                    Microsoft
-                  </Button>
-                  <Button variant="outline" className="w-full" disabled title="Coming soon">
-                    <Github className="mr-2 h-4 w-4" aria-hidden="true" /> GitHub
-                  </Button>
+                  <div className="mt-5 space-y-2.5">
+                    <Button
+                      className="w-full"
+                      onClick={() => void sendLink(sentTo)}
+                      disabled={busy || cooldown > 0}
+                    >
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                      {cooldown > 0 ? `Resend email in ${cooldown}s` : "Resend email"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setSentTo(null);
+                        setError(null);
+                      }}
+                      disabled={busy}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" /> Change email
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-center text-[11px] text-muted-foreground">
-                  Microsoft and GitHub sign-in coming soon.
-                </p>
-              </div>
+              ) : (
+                <>
+                  <h1 className="text-lg font-semibold tracking-tight text-foreground">
+                    Sign in to Big Data Intelligence Hub
+                  </h1>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Enter your email and we'll send a secure sign-in link — no password needed.
+                  </p>
+
+                  <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email address</Label>
+                      <Input
+                        id="email"
+                        ref={emailRef}
+                        type="email"
+                        autoComplete="email"
+                        autoFocus
+                        placeholder="you@company.com"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          setError(null);
+                        }}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={busy}>
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                      Continue
+                    </Button>
+                  </form>
+
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => void handleGoogle()}
+                    disabled={busy}
+                  >
+                    Continue with Google
+                  </Button>
+                </>
+              )}
+
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3"
+                >
+                  <p className="flex items-start gap-2 text-xs text-foreground">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" aria-hidden="true" />
+                    {error}
+                  </p>
+                  <div className="mt-2.5 flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setError(null)} disabled={busy}>
+                      Retry
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setError(null);
+                        setSentTo(null);
+                        emailRef.current?.focus();
+                      }}
+                    >
+                      Use email instead
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <AuthFooterLinks />
             </div>
 
             <ul className="mt-5 space-y-2">
