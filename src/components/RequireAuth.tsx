@@ -11,12 +11,16 @@ const Skeleton = () => (
 );
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, expired } = useAuth();
   const location = useLocation();
   const next = location.pathname + location.search;
 
   if (loading) return <Skeleton />;
-  if (!user) return <Navigate to={`/signin?next=${encodeURIComponent(next)}`} replace />;
+  if (!user) {
+    const params = new URLSearchParams({ next });
+    if (expired) params.set("expired", "1");
+    return <Navigate to={`/signin?${params.toString()}`} replace />;
+  }
   return <>{children}</>;
 };
 
