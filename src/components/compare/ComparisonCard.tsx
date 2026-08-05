@@ -191,10 +191,20 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
             </ul>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={copyBriefing}>
               <Copy className="h-4 w-4" /> Copy briefing
             </Button>
+            <ShareCardDialog
+              data={{
+                title: row.capability,
+                why: row.capability_gap,
+                status: `${VENDOR_LABELS[row.vendor]} · ${row.position}`,
+                sources: row.confidence_signals.source_count,
+                eyebrow: "Competitive intelligence",
+              }}
+              label="Share card"
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
