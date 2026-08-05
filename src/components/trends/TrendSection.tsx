@@ -1,5 +1,6 @@
 import { Hash, ArrowRight, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import type { TrendItem } from "@/data/mockData";
+import ShareCardDialog from "@/components/share/ShareCardDialog";
 
 const directionIcon = (t: TrendItem) => {
   if (t.status === "new") return <Sparkles className="h-3.5 w-3.5 text-status-new" />;
