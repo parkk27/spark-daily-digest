@@ -1,77 +1,80 @@
 # Authentication Audit — Big Data Intelligence Hub
 
-End-to-end audit completed before any code change. Findings below are verified against the live auth configuration, the sign-in page, the session hook and the environment file — not inferred.
+End-to-end audit completed before any code change. Findings are verified against the live auth configuration, the sign-in page, the session hook and the environment file — not inferred.
+
+**Decisions taken:** canonical production origin is `https://bigdata-hub.lovable.app`; a sender domain will be set up.
 
 ## Audit report
 
 ### 1. Magic Link emails: no sender domain configured (primary root cause)
 
-- **Root cause:** The project has no email sending domain (`not_started`). All magic-link emails go out through the shared default Lovable sender, which is subject to a low per-hour auth-email cap and much weaker deliverability (shared IP reputation, no SPF/DKIM aligned to your brand). Result: some links arrive, some are throttled with a rate-limit error, some land in spam/quarantine — exactly the "inconsistent delivery" symptom.
+- **Root cause:** The project has no email sending domain (`not_started`). All magic-link emails go out through the shared default Lovable sender, subject to a low per-hour auth-email cap and much weaker deliverability (shared reputation, no SPF/DKIM aligned to your brand). Some links arrive, some are throttled, some land in spam — exactly the "inconsistent delivery" symptom.
 - **Affected:** backend email configuration (no app files).
-- **Risk:** High. Users cannot sign in reliably; passwordless is the only email method offered.
-- **Fix:** Set up a sender domain you own, then raise the hourly auth-email limit to match real signup volume.
-- **Verify:** Domain shows verified; send a link to Gmail + Outlook; delivery log shows `sent` with your domain in the From header.
+- **Risk:** High — passwordless email is the only non-Google sign-in method.
+- **Fix:** Set up your sender domain, provision the email queue infrastructure, scaffold branded auth email templates, then raise the hourly auth-email limit to match real signup volume.
+- **Verify:** Domain verified; test link to Gmail + Outlook arrives from your domain; send log shows `sent`.
 
-### 2. Production redirect allow-list does not include the Vercel domain
+### 2. Redirect allow-list contains a stale, wrong Vercel entry
 
-- **Root cause:** Site URL is `https://bigdata-hub.lovable.app`. The redirect allow-list contains `https://vercel.com/**` (the Vercel dashboard, not your app) but **not** `https://bigdata-hub.vercel.app/**`. A magic link requested from the Vercel deployment sends `emailRedirectTo` pointing at `bigdata-hub.vercel.app`; because that URL is not allow-listed, the auth server silently falls back to the Site URL, so the user lands on the Lovable domain with the code and never gets a session on Vercel — reading as "the link didn't work".
-- **Affected:** auth redirect configuration; `src/pages/AuthPage.tsx` (builds `emailRedirectTo` from `window.location.origin`).
-- **Risk:** High.
-- **Fix:** Decide the single canonical production origin, then align Site URL + allow-list to it. Add `https://bigdata-hub.vercel.app/**` to the allow-list and remove the stale `https://vercel.com/**` entry.
-- **Verify:** Request a link on the Vercel domain; the emailed URL host is the Vercel host and lands signed in on `/dashboard`.
+- **Root cause:** Site URL is `https://bigdata-hub.lovable.app` (correct), but the allow-list includes `https://vercel.com/**` — the Vercel dashboard, not an app origin. Any link requested from a Vercel deployment resolves back to the Site URL, so the session never lands where the user started.
+- **Affected:** auth redirect configuration; `src/pages/AuthPage.tsx` (derives `emailRedirectTo` from `window.location.origin`).
+- **Risk:** Medium now that Lovable is canonical — but it silently breaks anyone still opening the Vercel deployment.
+- **Fix:** Remove the `vercel.com` allow-list entries and stop deriving production redirects from whatever origin the browser happens to be on.
+- **Verify:** Magic link requested on the production site returns to `bigdata-hub.lovable.app` signed in.
 
-### 3. Google OAuth on Vercel uses the managed broker
+### 3. Google OAuth — correct for the chosen host
 
-- **Root cause:** `handleGoogle` calls the managed Lovable OAuth helper with `redirect_uri: window.location.origin`. The managed broker endpoints only exist on Lovable-hosted origins, which is why the earlier `/~oauth/initiate` 404 appeared on Vercel.
-- **Affected:** `src/pages/AuthPage.tsx`, `src/integrations/lovable/index.ts`.
-- **Risk:** High if Vercel stays the production host; none if production is the Lovable domain.
-- **Fix:** Depends on the canonical-host decision (question below). Keep managed OAuth on the Lovable domain, or switch that call to direct provider OAuth with your own Google credentials for Vercel.
-- **Verify:** Google sign-in completes on the production host and returns to `/dashboard`.
+- The managed Lovable OAuth helper only works on Lovable-hosted origins; with `bigdata-hub.lovable.app` as canonical, the current implementation is correct and needs no change. The earlier `/~oauth/initiate` 404 was the Vercel deployment, which is now non-canonical.
 
 ### 4. GitHub and Microsoft OAuth are not available
 
-- **Root cause:** The managed backend supports Email, Phone, Google, Apple and SAML SSO only. GitHub/Microsoft were previously removed from the UI for this reason.
-- **Risk:** Low (scope clarity).
-- **Fix:** Out of scope unless you want to move to a self-managed backend connection. Report only.
+- The managed backend supports Email, Phone, Google, Apple and SAML SSO only. Already removed from the UI. Report only, no action.
 
-### 5. Session management is correct, with one gap
+### 5. Session management is sound, with one gap
 
-- **Verified good:** `persistSession: true` and `autoRefreshToken: true` in the client; `detectSessionInUrl` defaults to on, so the magic-link code exchange happens automatically — no manual `exchangeCodeForSession` needed. `useAuth` registers `onAuthStateChange` before `getSession()`, tracks expiry, and syncs across tabs. `AuthPage` redirects an already-restored session straight to the destination, so users are not asked to log in twice.
-- **Gap:** if the code exchange fails (expired or already-used link), the user is dropped on `/signin` with no explanation.
-- **Fix:** Surface a specific "this link expired or was already used — request a new one" state when an error comes back in the callback URL.
-- **Verify:** Click a link twice; the second click shows the expired-link message rather than a blank sign-in form.
+- **Verified good:** `persistSession` and `autoRefreshToken` enabled; `detectSessionInUrl` defaults on, so the magic-link PKCE exchange happens automatically — no manual `exchangeCodeForSession` needed. `useAuth` registers `onAuthStateChange` before `getSession()`, tracks expiry and syncs across tabs; `AuthPage` redirects a restored session straight to the destination, so nobody logs in twice.
+- **Gap:** if the exchange fails (expired or reused link), the user lands on `/signin` with no explanation.
+- **Fix:** Read the error params the auth server appends to the callback URL and show a specific "this link expired or was already used" state with a resend action.
 
-### 6. Sign-out redirect and error handling
+### 6. Error handling
 
-- **Verified good:** raw errors are already mapped to friendly copy through `src/lib/authErrors.ts`; the rate-limit case has its own message.
-- **Gap:** friendly messages are shown but the underlying error object is never logged, so failures cannot be diagnosed from the console.
-- **Fix:** Log the full error in development alongside the friendly message.
+- **Good:** raw errors already map to friendly copy via `src/lib/authErrors.ts`, including the rate-limit case.
+- **Gap:** the underlying error object is never logged, so failures cannot be diagnosed from the console.
+- **Fix:** log the full error in development alongside the friendly message.
 
 ### 7. Auth telemetry is silently discarded
 
-- **Root cause:** `AuthPage` writes analytics rows for OTP request/success/failure and OAuth start, but those inserts run signed-out and the table only permits inserts where the row belongs to the current user. Every pre-sign-in auth event is rejected and the failure is swallowed.
-- **Affected:** `src/pages/AuthPage.tsx`.
+- **Root cause:** `AuthPage` writes analytics rows for OTP request/success/failure and OAuth start, but those inserts run signed-out and the table only permits rows owned by the current user. Every pre-sign-in auth event is rejected and swallowed.
 - **Risk:** Medium — you currently have no record of magic-link failures.
-- **Fix:** Replace the pre-auth analytics writes with structured console logging (OTP request, OTP success, OTP failure, OAuth start, OAuth callback, session restored, session expired), keeping database analytics for signed-in events only.
+- **Fix:** replace pre-auth analytics writes with structured console logging; keep database analytics for signed-in events only.
 
 ### 8. Environment variables
 
 - **Present and correct:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`.
-- **Missing:** `VITE_APP_URL` does not exist anywhere in the project; the app derives every redirect from `window.location.origin`. That is fine for a single-host deployment but produces wrong links when a user hits a preview/branch URL. If you want one canonical production origin, introduce `VITE_APP_URL` and use it for `emailRedirectTo` and the OAuth `redirect_uri`.
+- **Missing:** `VITE_APP_URL` does not exist; every redirect is derived from `window.location.origin`, so preview/branch/Vercel origins generate links that don't match the allow-list.
 
-## Proposed fixes (pending your answers)
+## Fix plan
 
-1. Set up the email sender domain, then raise the hourly auth-email limit.
-2. Align Site URL and redirect allow-list to the chosen canonical production origin; drop the stale `vercel.com` entry.
-3. Add `VITE_APP_URL` and use it (falling back to `window.location.origin`) for `emailRedirectTo` and the Google `redirect_uri`.
-4. Add an expired/used-link state on `/signin` driven by callback error params.
-5. Replace failing pre-auth analytics inserts with structured, development-only console logging across the seven listed events.
-6. Keep the Google path as-is on Lovable hosting, or move to direct provider OAuth if Vercel is canonical.
+1. **Email delivery** — run the sender-domain setup dialog, provision email infrastructure, scaffold and brand the auth email templates (dark executive theme, matching the app's tokens), deploy the auth email hook, then raise the hourly auth-email rate limit.
+2. **Canonical origin** — add `VITE_APP_URL=https://bigdata-hub.lovable.app` and a small `authOrigin()` helper that prefers it and falls back to `window.location.origin`; use it for `emailRedirectTo` and the Google `redirect_uri`.
+3. **Allow-list cleanup** — remove the stale `https://vercel.com/**` entries so only real app origins remain.
+4. **Expired-link state** — `/signin` detects `error`/`error_code` params from the callback and shows a clear expired-or-reused message with a resend button.
+5. **Structured logging** — dev-only, prefixed console logs for: OTP request, OTP success, OTP failure, OAuth start, OAuth callback, session restored, session expired; full error objects logged next to friendly messages.
+6. **Telemetry** — drop the failing signed-out inserts.
 
-No UI redesign — only the expired-link message and error surfacing change visually.
+No visual redesign: the only UI change is the new expired-link message.
 
 ## Technical notes
 
-- Magic link uses PKCE; the code exchange is handled by `detectSessionInUrl`. Do not add a manual `exchangeCodeForSession` call — it would double-consume the code.
-- `emailRedirectTo` and the OAuth `redirect_uri` must both be prefix-matched by an allow-list entry or the auth server falls back to Site URL.
-- `src/integrations/supabase/client.ts` is generated and must not be edited; the canonical-origin logic goes in `AuthPage`/a small helper.
+- Do not add a manual `exchangeCodeForSession` — `detectSessionInUrl` already consumes the code; calling both double-consumes it.
+- `emailRedirectTo` and the OAuth `redirect_uri` must be prefix-matched by an allow-list entry or the server silently falls back to Site URL.
+- `src/integrations/supabase/client.ts` is generated and must not be edited; the origin helper lives in `src/lib/`.
+- Auth email templates are scaffolded, not hand-written, and the hook must keep its required name.
+
+## Verification
+
+- Request a magic link on production: email arrives from your domain, link signs in and lands on `/dashboard`.
+- Click the same link twice: second click shows the expired-link message.
+- Google sign-in completes and returns to `/dashboard`.
+- Refresh and reopen a second tab: session restores with no second login.
+- Console shows the seven structured auth events in development.
