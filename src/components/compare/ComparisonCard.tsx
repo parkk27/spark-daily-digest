@@ -13,6 +13,7 @@ import {
 } from "@/data/features";
 import { ConfidenceBadge, ImpactBadge, PositionBadge } from "./ComparisonBadges";
 import ExecutiveActions from "./ExecutiveActions";
+import ShareCardDialog from "@/components/share/ShareCardDialog";
 
 const DiffList = ({
   title,
