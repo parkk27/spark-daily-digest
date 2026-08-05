@@ -103,6 +103,26 @@ const AskBigDataHub = () => {
         )}
       </div>
 
+      <div className="flex flex-wrap gap-1.5 border-b border-border px-6 py-3">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            aria-pressed={mode === m.id}
+            className={cn(
+              "rounded-md border px-2.5 py-1 text-xs transition-colors",
+              mode === m.id
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:bg-secondary/50"
+            )}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+
+
       <div className="px-6 py-5">
         {messages.length === 0 ? (
           <div className="space-y-4">
