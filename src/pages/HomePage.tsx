@@ -1,8 +1,12 @@
+import { useMemo } from "react";
 import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useSparkData } from "@/hooks/useSparkData";
 import AskBigDataHub from "@/components/AskBigDataHub";
+import ExecutiveSummaryCard from "@/components/ExecutiveSummaryCard";
+import { buildExecutiveIntelligence } from "@/lib/executive";
 import SeoHead from "@/components/SeoHead";
+
 
 
 const SectionCard = ({
