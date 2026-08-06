@@ -12,7 +12,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: "/dashboard",
     target: '[data-tour="nav-dashboard"]',
     title: "Your daily brief",
-    body: "The dashboard opens with today's synthesized brief — top insight, highlights and momentum, refreshed each ingestion cycle.",
+    body: "Big Data Intelligence Hub tracks the big data ecosystem daily for product, sales and strategy teams. The dashboard opens with today's synthesized brief — top insight, highlights and momentum.",
   },
   {
     id: "executive-intelligence",
@@ -20,6 +20,13 @@ export const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="executive-intelligence"]',
     title: "Executive intelligence",
     body: "A deterministic read of the ecosystem from the Microsoft Fabric Spark perspective: biggest change, opportunity, risk and the recommended next action.",
+  },
+  {
+    id: "benchmark-context",
+    route: "/dashboard",
+    target: '[data-tour="benchmark-context"]',
+    title: 'What "benchmarked against" means',
+    body: "Every insight is written from the Microsoft Fabric Spark point of view and measured against Databricks, BigQuery, AWS EMR, Snowflake and the Apache Spark ecosystem — over the stated analysis window and source count.",
   },
   {
     id: "news",
@@ -40,20 +47,20 @@ export const TOUR_STEPS: TourStep[] = [
     route: "/dashboard",
     target: '[data-tour="nav-compare"]',
     title: "Compare",
-    body: "Benchmark capabilities against Databricks, BigQuery, EMR and Snowflake in a competitive intelligence workspace.",
+    body: "Filter by category or competitor, then open a capability to see the competitor capability next to the Fabric Spark capability, why it matters, and the recommended next action.",
   },
   {
     id: "radar",
     route: "/dashboard",
     target: '[data-tour="nav-radar"]',
     title: "Action radar",
-    body: "Prioritized recommendations derived from the day's signals, ranked by importance and urgency.",
+    body: "Your decision surface: recommendations grouped into act now, watch and deprioritize, each with priority, confidence and an owner. Set a status to work through them.",
   },
   {
     id: "copilot",
     route: "/dashboard",
     target: '[data-tour="nav-copilot"]',
     title: "Ask the copilot",
-    body: "Ask questions about the ingested corpus and get grounded, cited answers in seconds.",
+    body: 'Ask plain questions of the ingested corpus — for example "What changed in Iceberg this week?" or "What should sales prepare for?" — and get grounded, cited answers.',
   },
 ];
