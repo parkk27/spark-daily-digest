@@ -15,6 +15,11 @@ import {
 } from "@/hooks/useRecommendations";
 import { useProfile, ROLE_FOCUS_LABELS } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
+import SurfaceCard from "@/components/ui/surface-card";
+import MetaChip from "@/components/ui/meta-chip";
+import EmptyState from "@/components/ui/empty-state";
+import SkeletonCard from "@/components/ui/skeleton-card";
+
 
 const SECTIONS: RecommendationSection[] = ["act_now", "watch", "deprioritize"];
 const STATUSES = ["open", "in_progress", "done", "dismissed"];

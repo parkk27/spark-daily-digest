@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { useProductTour } from "@/hooks/useProductTour";
 
 const CHECKLIST = [
-  "Read today's executive brief in under two minutes",
-  "See how the Executive Intelligence panel is derived",
-  "Scan the scored news feed and bookmark what matters",
-  "Track topic momentum and benchmark competitors",
-  "Work the action radar and ask the copilot",
+  "Read today's executive brief, written from the Microsoft Fabric Spark perspective",
+  "Understand what “benchmarked against” means and which vendors are tracked",
+  "Use Compare as a competitive intelligence workspace",
+  "Work the Action Radar as your decision surface",
+  "Ask the AI Copilot questions about the ingested corpus",
 ];
 
 const TourWelcomeDialog = () => {
@@ -27,8 +27,11 @@ const TourWelcomeDialog = () => {
         <DialogHeader>
           <DialogTitle>Welcome to Big Data Intelligence Hub</DialogTitle>
           <DialogDescription>
-            A two-minute tour of everything the platform does for you.
+            A daily intelligence brief on the big data ecosystem for product, sales and strategy
+            teams — every insight written from the Microsoft Fabric Spark point of view. Here's a
+            two-minute tour.
           </DialogDescription>
+
         </DialogHeader>
         <ul className="space-y-2">
           {CHECKLIST.map((item) => (
@@ -40,10 +43,11 @@ const TourWelcomeDialog = () => {
         </ul>
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="ghost" onClick={dismissWelcome}>
-            Skip for now
+            Skip tour
           </Button>
           <Button onClick={start}>Start tour</Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
