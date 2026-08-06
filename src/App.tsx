@@ -5,6 +5,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { TourProvider } from "@/hooks/useProductTour";
+import TourOverlay from "@/components/tour/TourOverlay";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import RequireAuth from "@/components/RequireAuth";
@@ -59,6 +61,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <TourProvider>
+          <TourOverlay />
           <Navbar />
           <main>
             <Routes>
@@ -110,6 +114,7 @@ const App = () => (
             </Routes>
           </main>
           <Footer />
+          </TourProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

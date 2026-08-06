@@ -16,8 +16,10 @@ import {
   Database,
   UserRound,
   Activity,
+  PlayCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useProductTour } from "@/hooks/useProductTour";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,18 +31,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const authedLinks = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/news", label: "News", icon: Newspaper },
-  { to: "/trends", label: "Trends", icon: TrendingUp },
-  { to: "/radar", label: "Radar", icon: Radar },
-  { to: "/compare", label: "Compare", icon: BarChart3 },
-  { to: "/copilot", label: "Copilot", icon: Sparkles },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "nav-dashboard" },
+  { to: "/news", label: "News", icon: Newspaper, tour: "nav-news" },
+  { to: "/trends", label: "Trends", icon: TrendingUp, tour: "nav-trends" },
+  { to: "/radar", label: "Radar", icon: Radar, tour: "nav-radar" },
+  { to: "/compare", label: "Compare", icon: BarChart3, tour: "nav-compare" },
+  { to: "/copilot", label: "Copilot", icon: Sparkles, tour: "nav-copilot" },
 ];
 
 
 const publicLinks = [
-  { to: "/", label: "Home", icon: Home },
-  { to: "/about", label: "About", icon: Info },
+  { to: "/", label: "Home", icon: Home, tour: undefined as string | undefined },
+  { to: "/about", label: "About", icon: Info, tour: undefined as string | undefined },
 ];
 
 const Navbar = () => {
@@ -48,6 +50,7 @@ const Navbar = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
+  const { replay } = useProductTour();
   const links = user ? authedLinks : publicLinks;
 
   return (
@@ -64,10 +67,11 @@ const Navbar = () => {
           </span>
         </button>
         <nav className="flex items-center gap-1">
-          {links.map(({ to, label, icon: Icon }) => (
+          {links.map(({ to, label, icon: Icon, tour }) => (
             <NavLink
               key={to}
               to={to}
+              data-tour={tour}
               end={to === "/"}
               className={({ isActive }) =>
                 `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -111,6 +115,9 @@ const Navbar = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings className="mr-2 h-4 w-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={replay}>
+                  <PlayCircle className="mr-2 h-4 w-4" /> Replay tour
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
