@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import SeoHead from "@/components/SeoHead";
+import EmptyState from "@/components/ui/empty-state";
+
 import ComparisonCard from "@/components/compare/ComparisonCard";
 import { cn } from "@/lib/utils";
 import {
@@ -111,9 +113,12 @@ const ComparisonPage = ({ preview = false }: { preview?: boolean }) => {
       </p>
 
       {visible.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          No benchmarked capabilities match this filter yet.
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="No benchmarked capabilities match this filter"
+          description="Try a different category or competitor to see how Microsoft Fabric Spark stacks up."
+        />
+
       ) : (
         <div className="space-y-4">
           {visible.map((row) => (
