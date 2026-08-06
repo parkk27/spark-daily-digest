@@ -49,6 +49,16 @@
     --status-declining: 0 72% 51%;
 
     --surface-hover: 228 12% 14%;
+
+    /* Elevation scale */
+    --surface-1: 228 15% 8%;
+    --surface-2: 228 14% 11%;
+    --surface-3: 228 13% 14%;
+
+    --border-subtle: 228 12% 15%;
+
+    --shadow-card: 0 1px 2px 0 hsl(228 30% 3% / 0.4);
+    --shadow-raised: 0 1px 2px 0 hsl(228 30% 3% / 0.45), 0 12px 32px -12px hsl(228 30% 2% / 0.65);
   }
 }
 
@@ -60,11 +70,31 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring/60 ring-offset-2 ring-offset-background;
   }
 }
 
 @layer utilities {
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400;
+  }
+
+  /* Small uppercase section eyebrow */
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-[0.08em];
+  }
+
+  .measure {
+    @apply max-w-[68ch] leading-relaxed;
   }
 }
