@@ -39,8 +39,8 @@ const authedLinks = [
 
 
 const publicLinks = [
-  { to: "/", label: "Home", icon: Home },
-  { to: "/about", label: "About", icon: Info },
+  { to: "/", label: "Home", icon: Home, tour: undefined as string | undefined },
+  { to: "/about", label: "About", icon: Info, tour: undefined as string | undefined },
 ];
 
 const Navbar = () => {
@@ -64,10 +64,11 @@ const Navbar = () => {
           </span>
         </button>
         <nav className="flex items-center gap-1">
-          {links.map(({ to, label, icon: Icon }) => (
+          {links.map(({ to, label, icon: Icon, tour }) => (
             <NavLink
               key={to}
               to={to}
+              data-tour={tour}
               end={to === "/"}
               className={({ isActive }) =>
                 `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
