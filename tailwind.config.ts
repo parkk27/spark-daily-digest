@@ -63,6 +63,16 @@ export default {
           stable: "hsl(var(--status-stable))",
           declining: "hsl(var(--status-declining))",
         },
+        surface: {
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
+        },
+        "border-subtle": "hsl(var(--border-subtle))",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        raised: "var(--shadow-raised)",
       },
       borderRadius: {
         lg: "var(--radius)",

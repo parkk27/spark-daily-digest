@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import SeoHead from "@/components/SeoHead";
+import EmptyState from "@/components/ui/empty-state";
+
 import ComparisonCard from "@/components/compare/ComparisonCard";
 import { cn } from "@/lib/utils";
 import {
@@ -48,21 +50,28 @@ const ComparisonPage = ({ preview = false }: { preview?: boolean }) => {
       <header className="mb-6">
         <div className="flex items-center gap-2 text-primary">
           <BarChart3 className="h-5 w-5" />
-          <span className="text-xs font-medium uppercase tracking-wide">
-            Competitive intelligence
-          </span>
+          <span className="eyebrow">Competitive intelligence</span>
         </div>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+        <h1 className="mt-2 text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground">
           Competitive intelligence workspace
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className="measure mt-2 text-sm text-muted-foreground">
           Microsoft Fabric Spark benchmarked against competing data platforms on the capabilities
-          they ship today — with differentiation, customer impact and the actions each team should
+          they ship today — with differentiation, why it matters and the action each team should
           take next.
         </p>
       </header>
 
       <div className="sticky top-14 z-30 -mx-4 mb-6 space-y-2 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-xl">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+            Perspective: Microsoft Fabric Spark
+          </span>
+          <span className="text-xs text-muted-foreground">
+            benchmarked against Databricks, BigQuery, AWS EMR, Snowflake and the Apache Spark
+            ecosystem
+          </span>
+        </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setCategory("all")} aria-pressed={category === "all"} className={chip(category === "all")}>
             All categories
@@ -95,6 +104,7 @@ const ComparisonPage = ({ preview = false }: { preview?: boolean }) => {
         </div>
       </div>
 
+
       <p className="mb-4 text-sm text-muted-foreground">
         {visible.length} capabilit{visible.length === 1 ? "y" : "ies"} benchmarked ·{" "}
         <span className="text-status-growing">{positions.leader} leader</span> ·{" "}
@@ -103,9 +113,12 @@ const ComparisonPage = ({ preview = false }: { preview?: boolean }) => {
       </p>
 
       {visible.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          No benchmarked capabilities match this filter yet.
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="No benchmarked capabilities match this filter"
+          description="Try a different category or competitor to see how Microsoft Fabric Spark stacks up."
+        />
+
       ) : (
         <div className="space-y-4">
           {visible.map((row) => (
