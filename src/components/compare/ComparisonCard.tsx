@@ -149,13 +149,9 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
       </Button>
 
       {open && (
-        <div className="mt-2 space-y-4 border-t border-border pt-4">
+        <div className="mt-2 space-y-4 border-t border-border-subtle pt-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer impact</p>
-            <p className="mt-1 text-sm leading-relaxed text-foreground">{row.customer_impact}</p>
-          </div>
 
-          <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Strategic recommendation
             </p>
