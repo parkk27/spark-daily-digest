@@ -16,8 +16,10 @@ import {
   Database,
   UserRound,
   Activity,
+  PlayCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useProductTour } from "@/hooks/useProductTour";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,6 +114,9 @@ const Navbar = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings className="mr-2 h-4 w-4" /> Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={replay}>
+                  <PlayCircle className="mr-2 h-4 w-4" /> Replay tour
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
