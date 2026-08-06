@@ -76,7 +76,7 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
   };
 
   return (
-    <article className="rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30">
+    <article className="rounded-lg border border-border bg-surface-2 p-5 shadow-card transition-colors hover:border-primary/30 hover:bg-surface-3/40">
       <header className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-foreground">{VENDOR_LABELS[row.vendor]}</span>
         <PositionBadge position={row.position} />
