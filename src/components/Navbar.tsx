@@ -50,6 +50,7 @@ const Navbar = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
+  const { replay } = useProductTour();
   const links = user ? authedLinks : publicLinks;
 
   return (
