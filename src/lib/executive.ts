@@ -1,12 +1,30 @@
+import { formatDistanceToNowStrict, parseISO } from "date-fns";
 import type { Article, TrendItem, DailySummary } from "@/data/mockData";
 import { scoreArticle } from "@/lib/decisionIntelligence";
 
+/** The platform this brief is written from the perspective of. */
+export const OUR_PLATFORM = "Microsoft Fabric Spark";
+
+/** Vendors the ecosystem is benchmarked against. */
+export const BENCHMARK_VENDORS = [
+  "Databricks",
+  "Google BigQuery",
+  "AWS EMR",
+  "Snowflake",
+  "Apache Spark ecosystem",
+];
+
 export interface ExecutiveIntelligence {
+  perspective: string;
+  benchmarkVendors: string[];
+  analysisWindowLabel: string;
+  sourceCount: number;
+  lastRefreshedLabel: string;
   mostImportantChange: string;
   topOpportunity: string;
   topCompetitiveRisk: string;
   highestPriorityAction: string;
-  vendorLeadingInnovation: string;
+  innovationLeader: string;
   marketDirection: string;
   strategicOutlook: string;
   evidence: string[];
@@ -28,6 +46,14 @@ const pretty = (source: string) => {
   return key ? VENDOR_NAMES[key] : source;
 };
 
+const safeDistance = (date: string) => {
+  try {
+    return `${formatDistanceToNowStrict(parseISO(date))} ago`;
+  } catch {
+    return "unknown";
+  }
+};
+
 export function buildExecutiveIntelligence(
   daily: DailySummary,
   articles: Article[],
@@ -46,7 +72,8 @@ export function buildExecutiveIntelligence(
     acc[name] = (acc[name] ?? 0) + 1;
     return acc;
   }, {});
-  const leadVendor = Object.entries(vendorCounts).sort((a, b) => b[1] - a[1])[0];
+  const vendorRanking = Object.entries(vendorCounts).sort((a, b) => b[1] - a[1]);
+  const leadVendor = vendorRanking[0];
 
   const riskArticle =
     scored.find(
@@ -66,6 +93,11 @@ export function buildExecutiveIntelligence(
   );
 
   return {
+    perspective: OUR_PLATFORM,
+    benchmarkVendors: BENCHMARK_VENDORS,
+    analysisWindowLabel: "Latest daily ingestion cycle",
+    sourceCount: Object.keys(vendorCounts).length,
+    lastRefreshedLabel: safeDistance(daily.date),
     mostImportantChange:
       daily.summary.topInsight ||
       top?.article.title ||
@@ -73,15 +105,17 @@ export function buildExecutiveIntelligence(
     topOpportunity: opportunityTrend
       ? `${opportunityTrend.topic} momentum is ${
           opportunityTrend.status === "new" ? "newly emerging" : `up ${opportunityTrend.change}`
-        } — an opening to lead the narrative before competitors consolidate it.`
-      : "No clear opening detected in today's signals.",
+        } — an opening for ${OUR_PLATFORM} to lead the narrative before competitors consolidate it.`
+      : `No clear opening for ${OUR_PLATFORM} detected in today's signals.`,
     topCompetitiveRisk: riskArticle
       ? `${pretty(riskArticle.article.source)}: ${riskArticle.article.title}`
-      : "No material competitive risk detected today.",
+      : `No material competitive risk to ${OUR_PLATFORM} detected today.`,
     highestPriorityAction: top?.intel.next_action ?? "Continue monitoring the ecosystem feed.",
-    vendorLeadingInnovation: leadVendor
-      ? `${leadVendor[0]} (${leadVendor[1]} tracked update${leadVendor[1] === 1 ? "" : "s"})`
-      : "Insufficient data",
+    innovationLeader: leadVendor
+      ? `${leadVendor[0]} — most tracked announcements in this window (${leadVendor[1]} item${
+          leadVendor[1] === 1 ? "" : "s"
+        }); a volume signal, not an endorsement.`
+      : "Insufficient data in this window",
     marketDirection:
       daily.summary.trends?.[0] ??
       (growing.length > declining.length
@@ -91,9 +125,12 @@ export function buildExecutiveIntelligence(
       daily.summary.impact?.[0] ??
       "Open table formats and AI integration remain the decisive competitive axes for the next two quarters.",
     evidence: [
-      `${articles.length} articles ingested`,
-      `${trends.length} tracked topics`,
-      `${growing.length} growing · ${declining.length} declining`,
+      `Perspective: ${OUR_PLATFORM}`,
+      `${articles.length} articles ingested from ${Object.keys(vendorCounts).length} sources`,
+      `${trends.length} tracked topics · ${growing.length} growing · ${declining.length} declining`,
+      ...vendorRanking
+        .slice(0, 6)
+        .map(([name, count]) => `${name}: ${count} announcement${count === 1 ? "" : "s"}`),
       top ? `Highest-importance item scored ${top.intel.importance}/10` : "No scored items",
     ],
     confidence: Math.round(confidence),
