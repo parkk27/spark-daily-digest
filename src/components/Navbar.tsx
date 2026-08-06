@@ -29,12 +29,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const authedLinks = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/news", label: "News", icon: Newspaper },
-  { to: "/trends", label: "Trends", icon: TrendingUp },
-  { to: "/radar", label: "Radar", icon: Radar },
-  { to: "/compare", label: "Compare", icon: BarChart3 },
-  { to: "/copilot", label: "Copilot", icon: Sparkles },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "nav-dashboard" },
+  { to: "/news", label: "News", icon: Newspaper, tour: "nav-news" },
+  { to: "/trends", label: "Trends", icon: TrendingUp, tour: "nav-trends" },
+  { to: "/radar", label: "Radar", icon: Radar, tour: "nav-radar" },
+  { to: "/compare", label: "Compare", icon: BarChart3, tour: "nav-compare" },
+  { to: "/copilot", label: "Copilot", icon: Sparkles, tour: "nav-copilot" },
 ];
 
 

@@ -61,6 +61,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <TourProvider>
+          <TourOverlay />
           <Navbar />
           <main>
             <Routes>
@@ -112,6 +114,7 @@ const App = () => (
             </Routes>
           </main>
           <Footer />
+          </TourProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
