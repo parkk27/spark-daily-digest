@@ -88,26 +88,39 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
 
       <h3 className="mt-3 text-base font-semibold text-foreground">{row.capability}</h3>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="rounded-md border border-border/60 bg-secondary/30 p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Competitor capability
+      <div className="mt-4 grid gap-px overflow-hidden rounded-md border border-border bg-border-subtle md:grid-cols-2">
+        <div className="bg-surface-3/60 p-4">
+          <p className="eyebrow text-muted-foreground">
+            Competitor capability — {VENDOR_LABELS[row.vendor]}
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-sm leading-relaxed text-secondary-foreground">
             {row.competitor_capability}
           </p>
         </div>
-        <div className="rounded-md border border-primary/25 bg-primary/5 p-4">
-          <p className="text-xs uppercase tracking-wide text-primary">Microsoft Fabric Spark</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        <div className="bg-primary/[0.06] p-4">
+          <p className="eyebrow text-primary">Microsoft Fabric Spark capability</p>
+          <p className="mt-2 text-sm leading-relaxed text-secondary-foreground">
             {row.fabric_capability}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-muted-foreground">
+      <div className="mt-3 rounded-md border border-border bg-surface-3/50 px-3 py-2 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Capability gap: </span>
         {row.capability_gap}
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div>
+          <p className="eyebrow text-muted-foreground">Why this matters</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-foreground">{row.customer_impact}</p>
+        </div>
+        <div>
+          <p className="eyebrow text-muted-foreground">Recommended next action</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+            {row.recommendation.product}
+          </p>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -122,6 +135,7 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
       <div className="mt-4">
         <ConfidenceBadge confidence={row.confidence} detail={confidenceSummary(row)} />
       </div>
+
 
       <Button
         variant="ghost"
