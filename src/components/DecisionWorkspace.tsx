@@ -240,7 +240,7 @@ const DecisionWorkspace = ({
           <Button
             size="sm"
             onClick={submit}
-            disabled={!decision || !reason.trim() || upsertDecision.isPending}
+            disabled={!canSubmit}
           >
             {upsertDecision.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Save decision
