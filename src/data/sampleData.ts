@@ -114,6 +114,9 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: "Databricks",
     related_technologies: ["iceberg", "photon"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
   rec({
     id: "sample-2",
@@ -130,6 +133,9 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: "AWS",
     related_technologies: ["emr", "serverless"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
   rec({
     id: "sample-3",
@@ -150,6 +156,9 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: null,
     related_technologies: ["governance", "catalog"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
   rec({
     id: "sample-4",
@@ -166,6 +175,9 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: "Apache Iceberg",
     related_technologies: ["iceberg"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
   rec({
     id: "sample-5",
@@ -182,6 +194,9 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: null,
     related_technologies: ["ai", "query-engine"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
   rec({
     id: "sample-6",
@@ -198,6 +213,9 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: "Microsoft",
     related_technologies: ["delta", "iceberg"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
   rec({
     id: "sample-7",
@@ -214,5 +232,8 @@ export const SAMPLE_RECOMMENDATIONS: Recommendation[] = [
     related_vendor: null,
     related_technologies: ["hive"],
     due_date: null,
+    signal_type: "market",
+    polarity: "neutral",
+    score_breakdown: {},
   }),
 ];

@@ -86,6 +86,56 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_records: {
+        Row: {
+          created_at: string
+          decision: string
+          id: string
+          next_step: string | null
+          reason: string | null
+          recommendation_id: string
+          review_date: string | null
+          stakeholders: string[]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          id?: string
+          next_step?: string | null
+          reason?: string | null
+          recommendation_id: string
+          review_date?: string | null
+          stakeholders?: string[]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          id?: string
+          next_step?: string | null
+          reason?: string | null
+          recommendation_id?: string
+          review_date?: string | null
+          stakeholders?: string[]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_records_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "recommendations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -161,11 +211,14 @@ export type Database = {
           evidence_count: number
           id: string
           owner: string
+          polarity: string | null
           priority: string
           rationale: string | null
           related_technologies: string[]
           related_vendor: string | null
+          score_breakdown: Json
           section: string
+          signal_type: string | null
           summary: string
           title: string
           workspace_id: string | null
@@ -179,11 +232,14 @@ export type Database = {
           evidence_count?: number
           id?: string
           owner: string
+          polarity?: string | null
           priority: string
           rationale?: string | null
           related_technologies?: string[]
           related_vendor?: string | null
+          score_breakdown?: Json
           section: string
+          signal_type?: string | null
           summary: string
           title: string
           workspace_id?: string | null
@@ -197,11 +253,14 @@ export type Database = {
           evidence_count?: number
           id?: string
           owner?: string
+          polarity?: string | null
           priority?: string
           rationale?: string | null
           related_technologies?: string[]
           related_vendor?: string | null
+          score_breakdown?: Json
           section?: string
+          signal_type?: string | null
           summary?: string
           title?: string
           workspace_id?: string | null
