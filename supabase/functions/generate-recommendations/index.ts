@@ -27,6 +27,27 @@ const COMPETITORS = ["databricks", "aws", "google", "snowflake"];
 const COMPETITIVE_PATTERNS = /pricing|performance|benchmark|customer/i;
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
+const slugify = (v: string) =>
+  String(v ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+
+/** Deterministic business identity of a signal — stable across radar refreshes. */
+const buildSignalKey = (source: unknown, title: string, url?: unknown) => {
+  const src = slugify(String(source ?? "unknown")) || "unknown";
+  let ident = "";
+  try {
+    if (url) {
+      const u = new URL(String(url));
+      ident = slugify(`${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`);
+    }
+  } catch { /* fall through to title identity */ }
+  return `${src}:${ident || slugify(title) || "untitled"}`;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -87,6 +108,7 @@ Deno.serve(async (req) => {
 
       return {
         date: snap.date,
+        signal_key: buildSignalKey(a.source, String(a.title ?? ""), a.url ?? a.link),
         section,
         title: a.title,
         summary: a.summary,
@@ -109,11 +131,17 @@ Deno.serve(async (req) => {
       };
     });
 
-    await supabase.from("recommendations").delete().eq("date", snap.date);
-    const { error } = await supabase.from("recommendations").insert(rows);
+    // Upsert on the stable signal identity — never delete rows, so Decision Records
+    // stay attached to their signal across radar refreshes.
+    const deduped = Array.from(
+      new Map(rows.map((r) => [`${r.date}|${r.signal_key}`, r])).values(),
+    );
+    const { error } = await supabase
+      .from("recommendations")
+      .upsert(deduped, { onConflict: "date,signal_key" });
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, count: rows.length, date: snap.date }), {
+    return new Response(JSON.stringify({ success: true, count: deduped.length, date: snap.date }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

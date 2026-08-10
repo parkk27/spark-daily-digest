@@ -6,6 +6,7 @@ export type RecommendationSection = "act_now" | "watch" | "deprioritize";
 
 export interface Recommendation {
   id: string;
+  signal_key?: string | null;
   date: string;
   section: RecommendationSection;
   title: string;
@@ -33,7 +34,8 @@ export type DecisionKind =
 
 export interface DecisionRecord {
   id: string;
-  recommendation_id: string;
+  recommendation_id: string | null;
+  signal_key: string | null;
   decision: DecisionKind;
   reason: string | null;
   stakeholders: string[];
@@ -42,6 +44,18 @@ export interface DecisionRecord {
   status: string;
   updated_at: string;
 }
+
+export interface DecisionHistoryEntry {
+  id: string;
+  signal_key: string | null;
+  decision: DecisionKind;
+  reason: string | null;
+  change_reason: string | null;
+  review_date: string | null;
+  status: string | null;
+  changed_at: string;
+}
+
 
 export const DECISION_LABELS: Record<DecisionKind, string> = {
   investigate: "Investigate",
@@ -123,12 +137,19 @@ export function useRecommendationStatus() {
 
 export interface DecisionInput {
   recommendationId: string;
+  /** Stable business identity of the signal — survives radar refreshes. */
+  signalKey: string;
   decision: DecisionKind;
   reason: string;
   stakeholders: string[];
   next_step?: string | null;
   review_date?: string | null;
+  /** Required when an earlier decision is being replaced. */
+  change_reason?: string | null;
 }
+
+const DECISION_COLUMNS =
+  "id, recommendation_id, signal_key, decision, reason, stakeholders, next_step, review_date, status, updated_at";
 
 /** Decision Records — the auditable "what did we decide" layer on top of recommendations. */
 export function useDecisionRecords() {
@@ -139,33 +160,75 @@ export function useDecisionRecords() {
     queryKey: ["decision-records", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<Record<string, DecisionRecord>> => {
-      const { data, error } = await supabase
-        .from("decision_records")
-        .select("id, recommendation_id, decision, reason, stakeholders, next_step, review_date, status, updated_at");
+      const { data, error } = await supabase.from("decision_records").select(DECISION_COLUMNS);
       if (error) throw error;
-      return Object.fromEntries(
-        (data ?? []).map((r) => [r.recommendation_id, r as unknown as DecisionRecord])
-      );
+      // Keyed by stable signal key, with the legacy UUID kept as a fallback key.
+      const map: Record<string, DecisionRecord> = {};
+      for (const row of (data ?? []) as unknown as DecisionRecord[]) {
+        if (row.signal_key) map[row.signal_key] = row;
+        if (row.recommendation_id) map[row.recommendation_id] = row;
+      }
+      return map;
     },
   });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["decision-records", user?.id] });
+    qc.invalidateQueries({ queryKey: ["decision-history", user?.id] });
+    qc.invalidateQueries({ queryKey: ["recommendation-status", user?.id] });
+  };
+
+  /** Append-only: snapshot the outgoing decision before it is replaced. */
+  const archive = async (prev: DecisionRecord, changeReason?: string | null) => {
+    const { error } = await supabase.from("decision_record_history").insert({
+      decision_record_id: prev.id,
+      user_id: user!.id,
+      signal_key: prev.signal_key,
+      recommendation_id: prev.recommendation_id,
+      decision: prev.decision,
+      reason: prev.reason,
+      stakeholders: prev.stakeholders ?? [],
+      next_step: prev.next_step,
+      review_date: prev.review_date,
+      status: prev.status,
+      change_reason: changeReason ?? null,
+    });
+    if (error) throw error;
+  };
+
+  const findExisting = async (signalKey: string, recommendationId: string) => {
+    const { data, error } = await supabase
+      .from("decision_records")
+      .select(DECISION_COLUMNS)
+      .or(`signal_key.eq.${signalKey},recommendation_id.eq.${recommendationId}`)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as unknown as DecisionRecord) ?? null;
+  };
 
   const upsertDecision = useMutation({
     mutationFn: async (input: DecisionInput) => {
       const sync = DECISION_SYNC[input.decision];
-      const { error } = await supabase.from("decision_records").upsert(
-        {
-          user_id: user!.id,
-          recommendation_id: input.recommendationId,
-          decision: input.decision,
-          reason: input.reason,
-          stakeholders: input.stakeholders,
-          next_step: input.next_step ?? null,
-          review_date: input.review_date ?? null,
-          status: sync.record,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,recommendation_id" }
-      );
+      const existing = await findExisting(input.signalKey, input.recommendationId);
+      if (existing) await archive(existing, input.change_reason);
+
+      const payload = {
+        user_id: user!.id,
+        recommendation_id: input.recommendationId,
+        signal_key: input.signalKey,
+        decision: input.decision,
+        reason: input.reason,
+        stakeholders: input.stakeholders,
+        next_step: input.next_step ?? null,
+        review_date: input.review_date ?? null,
+        status: sync.record,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = existing
+        ? await supabase.from("decision_records").update(payload).eq("id", existing.id)
+        : await supabase.from("decision_records").insert(payload);
       if (error) throw error;
 
       const { error: statusError } = await supabase.from("recommendation_status").upsert(
@@ -179,12 +242,71 @@ export function useDecisionRecords() {
       );
       if (statusError) throw statusError;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["decision-records", user?.id] });
-      qc.invalidateQueries({ queryKey: ["recommendation-status", user?.id] });
-    },
+    onSuccess: invalidate,
   });
 
-  return { decisions: query.data ?? {}, isLoading: query.isLoading, upsertDecision };
+  /** Push a review date out without changing the decision itself. */
+  const extendReview = useMutation({
+    mutationFn: async ({ id, review_date }: { id: string; review_date: string }) => {
+      const { error } = await supabase
+        .from("decision_records")
+        .update({ review_date, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  /** Close a decision out — mirrors to the existing legacy status values only. */
+  const resolveDecision = useMutation({
+    mutationFn: async (record: DecisionRecord) => {
+      await archive(record, "Resolved");
+      const { error } = await supabase
+        .from("decision_records")
+        .update({ status: "resolved", updated_at: new Date().toISOString() })
+        .eq("id", record.id);
+      if (error) throw error;
+      if (record.recommendation_id) {
+        await supabase.from("recommendation_status").upsert(
+          {
+            user_id: user!.id,
+            recommendation_id: record.recommendation_id,
+            status: "resolved",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,recommendation_id" }
+        );
+      }
+    },
+    onSuccess: invalidate,
+  });
+
+  return {
+    decisions: query.data ?? {},
+    isLoading: query.isLoading,
+    upsertDecision,
+    extendReview,
+    resolveDecision,
+  };
 }
+
+/** Previous decisions for a signal, newest first. */
+export function useDecisionHistory(signalKey?: string | null) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["decision-history", user?.id, signalKey],
+    enabled: !!user && !!signalKey,
+    queryFn: async (): Promise<DecisionHistoryEntry[]> => {
+      const { data, error } = await supabase
+        .from("decision_record_history")
+        .select("id, signal_key, decision, reason, change_reason, review_date, status, changed_at")
+        .eq("signal_key", signalKey!)
+        .order("changed_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []) as unknown as DecisionHistoryEntry[];
+    },
+  });
+}
+
 

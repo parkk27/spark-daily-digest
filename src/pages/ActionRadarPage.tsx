@@ -4,6 +4,7 @@ import SeoHead from "@/components/SeoHead";
 import EvidencePopover from "@/components/EvidencePopover";
 import BookmarkButton from "@/components/BookmarkButton";
 import DecisionWorkspace from "@/components/DecisionWorkspace";
+import DecisionSummary from "@/components/DecisionSummary";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,15 +12,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useRecommendations,
   useDecisionRecords,
-  DECISION_LABELS,
   SECTION_LABELS,
   type RecommendationSection,
 } from "@/hooks/useRecommendations";
+import { signalIdOf, reviewState } from "@/lib/signalIdentity";
 import { useProfile, ROLE_FOCUS_LABELS } from "@/hooks/useProfile";
 import SurfaceCard from "@/components/ui/surface-card";
 import MetaChip from "@/components/ui/meta-chip";
 import EmptyState from "@/components/ui/empty-state";
 import SkeletonCard from "@/components/ui/skeleton-card";
+
 
 
 const SECTIONS: RecommendationSection[] = ["act_now", "watch", "deprioritize"];
@@ -49,7 +51,12 @@ const ActionRadarPage = () => {
   const qc = useQueryClient();
   const [mineOnly, setMineOnly] = useState(false);
   const [decidedOnly, setDecidedOnly] = useState(false);
-  const [workspaceFor, setWorkspaceFor] = useState<{ id: string; title: string } | null>(null);
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const [workspaceFor, setWorkspaceFor] = useState<{
+    id: string;
+    signalKey: string;
+    title: string;
+  } | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const focus = profile?.role_focus ?? "product";
@@ -57,9 +64,15 @@ const ActionRadarPage = () => {
     () =>
       recommendations
         .filter((r) => (mineOnly ? r.owner === focus : true))
-        .filter((r) => (decidedOnly ? !!decisions[r.id] : true)),
-    [recommendations, mineOnly, focus, decidedOnly, decisions]
+        .filter((r) => (decidedOnly ? !!decisions[signalIdOf(r)] : true))
+        .filter((r) => {
+          if (!reviewOnly) return true;
+          const d = decisions[signalIdOf(r)];
+          return !!d && reviewState(d.review_date, d.status) === "overdue";
+        }),
+    [recommendations, mineOnly, focus, decidedOnly, reviewOnly, decisions]
   );
+
 
   const generate = async () => {
     setGenerating(true);
@@ -113,6 +126,14 @@ const ActionRadarPage = () => {
           >
             My decisions
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={reviewOnly}
+            onClick={() => setReviewOnly((v) => !v)}
+          >
+            Needs review
+          </Button>
           <Button size="sm" onClick={generate} disabled={generating}>
             {generating && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Refresh radar
@@ -160,7 +181,7 @@ const ActionRadarPage = () => {
                 </div>
                 <div className="space-y-3">
                   {rows.map((r) => {
-                    const decision = decisions[r.id];
+                    const decision = decisions[signalIdOf(r)];
                     return (
                       <SurfaceCard
                         key={r.id}
@@ -220,34 +241,27 @@ const ActionRadarPage = () => {
                         </div>
                         <div className="mt-4 border-t border-border-subtle pt-3">
                           {decision ? (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                              <span className="font-medium text-primary">
-                                {DECISION_LABELS[decision.decision]}
-                              </span>
-                              {decision.reason && (
-                                <span className="text-muted-foreground">{decision.reason}</span>
-                              )}
-                              {decision.review_date && (
-                                <span className="text-muted-foreground">
-                                  Review{" "}
-                                  {new Date(decision.review_date).toLocaleDateString(undefined, {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              )}
-                              <button
-                                onClick={() => setWorkspaceFor({ id: r.id, title: r.title })}
-                                className="ml-auto text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                              >
-                                Change decision
-                              </button>
-                            </div>
+                            <DecisionSummary
+                              decision={decision}
+                              onChangeDecision={() =>
+                                setWorkspaceFor({
+                                  id: r.id,
+                                  signalKey: signalIdOf(r),
+                                  title: r.title,
+                                })
+                              }
+                            />
                           ) : (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => setWorkspaceFor({ id: r.id, title: r.title })}
+                              onClick={() =>
+                                setWorkspaceFor({
+                                  id: r.id,
+                                  signalKey: signalIdOf(r),
+                                  title: r.title,
+                                })
+                              }
                             >
                               Take action
                             </Button>
@@ -268,8 +282,9 @@ const ActionRadarPage = () => {
           open={!!workspaceFor}
           onOpenChange={(o) => !o && setWorkspaceFor(null)}
           recommendationId={workspaceFor.id}
+          signalKey={workspaceFor.signalKey}
           signalTitle={workspaceFor.title}
-          existing={decisions[workspaceFor.id]}
+          existing={decisions[workspaceFor.signalKey] ?? decisions[workspaceFor.id]}
         />
       )}
     </div>
