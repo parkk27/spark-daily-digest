@@ -19,7 +19,54 @@ export interface Recommendation {
   related_vendor: string | null;
   related_technologies: string[] | null;
   due_date: string | null;
+  signal_type: string;
+  polarity: string;
+  score_breakdown: Record<string, number>;
 }
+
+export type DecisionKind =
+  | "investigate"
+  | "positioning"
+  | "customer_research"
+  | "monitor"
+  | "no_action";
+
+export interface DecisionRecord {
+  id: string;
+  recommendation_id: string;
+  decision: DecisionKind;
+  reason: string | null;
+  stakeholders: string[];
+  next_step: string | null;
+  review_date: string | null;
+  status: string;
+  updated_at: string;
+}
+
+export const DECISION_LABELS: Record<DecisionKind, string> = {
+  investigate: "Investigate",
+  positioning: "Update positioning",
+  customer_research: "Customer research",
+  monitor: "Monitor",
+  no_action: "No action",
+};
+
+export const DECISION_DESCRIPTIONS: Record<DecisionKind, string> = {
+  investigate: "Needs more evidence before deciding",
+  positioning: "No product change — update competitive messaging",
+  customer_research: "Validate with 5–10 customers",
+  monitor: "Insufficient evidence to act now",
+  no_action: "Low strategic relevance",
+};
+
+const DECISION_SYNC: Record<DecisionKind, { record: string; mirrored: string }> = {
+  investigate: { record: "investigating", mirrored: "in_progress" },
+  customer_research: { record: "investigating", mirrored: "in_progress" },
+  positioning: { record: "in_progress", mirrored: "in_progress" },
+  monitor: { record: "investigating", mirrored: "open" },
+  no_action: { record: "dismissed", mirrored: "dismissed" },
+};
+
 
 export const SECTION_LABELS: Record<RecommendationSection, string> = {
   act_now: "Act now",
