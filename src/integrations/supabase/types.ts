@@ -86,6 +86,65 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_record_history: {
+        Row: {
+          change_reason: string | null
+          changed_at: string
+          created_at: string
+          decision: string
+          decision_record_id: string | null
+          id: string
+          next_step: string | null
+          reason: string | null
+          recommendation_id: string | null
+          review_date: string | null
+          signal_key: string | null
+          stakeholders: string[]
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string
+          created_at?: string
+          decision: string
+          decision_record_id?: string | null
+          id?: string
+          next_step?: string | null
+          reason?: string | null
+          recommendation_id?: string | null
+          review_date?: string | null
+          signal_key?: string | null
+          stakeholders?: string[]
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string
+          created_at?: string
+          decision?: string
+          decision_record_id?: string | null
+          id?: string
+          next_step?: string | null
+          reason?: string | null
+          recommendation_id?: string | null
+          review_date?: string | null
+          signal_key?: string | null
+          stakeholders?: string[]
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_record_history_decision_record_id_fkey"
+            columns: ["decision_record_id"]
+            isOneToOne: false
+            referencedRelation: "decision_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       decision_records: {
         Row: {
           created_at: string
@@ -93,8 +152,9 @@ export type Database = {
           id: string
           next_step: string | null
           reason: string | null
-          recommendation_id: string
+          recommendation_id: string | null
           review_date: string | null
+          signal_key: string | null
           stakeholders: string[]
           status: string
           updated_at: string
@@ -106,8 +166,9 @@ export type Database = {
           id?: string
           next_step?: string | null
           reason?: string | null
-          recommendation_id: string
+          recommendation_id?: string | null
           review_date?: string | null
+          signal_key?: string | null
           stakeholders?: string[]
           status?: string
           updated_at?: string
@@ -119,8 +180,9 @@ export type Database = {
           id?: string
           next_step?: string | null
           reason?: string | null
-          recommendation_id?: string
+          recommendation_id?: string | null
           review_date?: string | null
+          signal_key?: string | null
           stakeholders?: string[]
           status?: string
           updated_at?: string
@@ -218,6 +280,7 @@ export type Database = {
           related_vendor: string | null
           score_breakdown: Json
           section: string
+          signal_key: string
           signal_type: string | null
           summary: string
           title: string
@@ -239,6 +302,7 @@ export type Database = {
           related_vendor?: string | null
           score_breakdown?: Json
           section: string
+          signal_key: string
           signal_type?: string | null
           summary: string
           title: string
@@ -260,6 +324,7 @@ export type Database = {
           related_vendor?: string | null
           score_breakdown?: Json
           section?: string
+          signal_key?: string
           signal_type?: string | null
           summary?: string
           title?: string
