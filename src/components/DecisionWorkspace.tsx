@@ -39,6 +39,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   recommendationId: string;
+  /** Stable signal identity — decisions attach to this, not to the recommendation UUID. */
+  signalKey: string;
   signalTitle: string;
   existing?: DecisionRecord;
 }
@@ -48,6 +50,7 @@ const DecisionWorkspace = ({
   open,
   onOpenChange,
   recommendationId,
+  signalKey,
   signalTitle,
   existing,
 }: Props) => {
@@ -57,6 +60,7 @@ const DecisionWorkspace = ({
   const [stakeholders, setStakeholders] = useState<string[]>([]);
   const [nextStep, setNextStep] = useState("");
   const [reviewDate, setReviewDate] = useState<Date | undefined>();
+  const [changeReason, setChangeReason] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +69,12 @@ const DecisionWorkspace = ({
     setStakeholders(existing?.stakeholders ?? []);
     setNextStep(existing?.next_step ?? "");
     setReviewDate(existing?.review_date ? new Date(existing.review_date) : undefined);
+    setChangeReason("");
   }, [open, existing]);
+
+  const isChange = !!existing;
+  const canSubmit =
+    !!decision && !!reason.trim() && (!isChange || !!changeReason.trim()) && !upsertDecision.isPending;
 
   const toggleStakeholder = (name: string) =>
     setStakeholders((prev) =>
@@ -73,15 +82,17 @@ const DecisionWorkspace = ({
     );
 
   const submit = async () => {
-    if (!decision || !reason.trim()) return;
+    if (!decision || !reason.trim() || (isChange && !changeReason.trim())) return;
     try {
       await upsertDecision.mutateAsync({
         recommendationId,
+        signalKey,
         decision,
         reason: reason.trim(),
         stakeholders,
         next_step: nextStep.trim() || null,
         review_date: reviewDate ? format(reviewDate, "yyyy-MM-dd") : null,
+        change_reason: isChange ? changeReason.trim() : null,
       });
       onOpenChange(false);
       toast.success("Decision Record saved", { description: DECISION_LABELS[decision] });
@@ -89,6 +100,7 @@ const DecisionWorkspace = ({
       toast.error("Could not save the Decision Record");
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
