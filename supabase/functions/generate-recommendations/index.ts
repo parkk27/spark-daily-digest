@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       .upsert(deduped, { onConflict: "date,signal_key" });
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, count: rows.length, date: snap.date }), {
+    return new Response(JSON.stringify({ success: true, count: deduped.length, date: snap.date }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
