@@ -233,34 +233,27 @@ const ActionRadarPage = () => {
                         </div>
                         <div className="mt-4 border-t border-border-subtle pt-3">
                           {decision ? (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                              <span className="font-medium text-primary">
-                                {DECISION_LABELS[decision.decision]}
-                              </span>
-                              {decision.reason && (
-                                <span className="text-muted-foreground">{decision.reason}</span>
-                              )}
-                              {decision.review_date && (
-                                <span className="text-muted-foreground">
-                                  Review{" "}
-                                  {new Date(decision.review_date).toLocaleDateString(undefined, {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              )}
-                              <button
-                                onClick={() => setWorkspaceFor({ id: r.id, title: r.title })}
-                                className="ml-auto text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                              >
-                                Change decision
-                              </button>
-                            </div>
+                            <DecisionSummary
+                              decision={decision}
+                              onChangeDecision={() =>
+                                setWorkspaceFor({
+                                  id: r.id,
+                                  signalKey: signalIdOf(r),
+                                  title: r.title,
+                                })
+                              }
+                            />
                           ) : (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => setWorkspaceFor({ id: r.id, title: r.title })}
+                              onClick={() =>
+                                setWorkspaceFor({
+                                  id: r.id,
+                                  signalKey: signalIdOf(r),
+                                  title: r.title,
+                                })
+                              }
                             >
                               Take action
                             </Button>
