@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
-import { Radar, Loader2 } from "lucide-react";
+import { Radar, Loader2, ArrowUp, AlertTriangle, Minus } from "lucide-react";
 import SeoHead from "@/components/SeoHead";
 import EvidencePopover from "@/components/EvidencePopover";
 import BookmarkButton from "@/components/BookmarkButton";
+import DecisionWorkspace from "@/components/DecisionWorkspace";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useRecommendations,
-  useRecommendationStatus,
+  useDecisionRecords,
+  DECISION_LABELS,
   SECTION_LABELS,
   type RecommendationSection,
 } from "@/hooks/useRecommendations";
@@ -22,26 +24,42 @@ import SkeletonCard from "@/components/ui/skeleton-card";
 
 
 const SECTIONS: RecommendationSection[] = ["act_now", "watch", "deprioritize"];
-const STATUSES = ["open", "in_progress", "done", "dismissed"];
-const STATUS_LABELS: Record<string, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  done: "Done",
-  dismissed: "Dismissed",
+
+const SIGNAL_TYPE_LABELS: Record<string, string> = {
+  competitive: "Competitive",
+  customer: "Customer",
+  technology: "Technology",
+  market: "Market",
+  commercial: "Commercial",
+  regulatory: "Regulatory",
+  ecosystem: "Ecosystem",
+};
+
+const PolarityIcon = ({ polarity }: { polarity: string }) => {
+  if (polarity === "opportunity")
+    return <ArrowUp className="h-3.5 w-3.5 text-growing" aria-label="Opportunity" />;
+  if (polarity === "threat")
+    return <AlertTriangle className="h-3.5 w-3.5 text-declining" aria-label="Threat" />;
+  return <Minus className="h-3.5 w-3.5 text-muted-foreground" aria-label="Neutral" />;
 };
 
 const ActionRadarPage = () => {
   const { data: recommendations = [], isLoading } = useRecommendations();
-  const { statuses, setStatus } = useRecommendationStatus();
+  const { decisions } = useDecisionRecords();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
   const [mineOnly, setMineOnly] = useState(false);
+  const [decidedOnly, setDecidedOnly] = useState(false);
+  const [workspaceFor, setWorkspaceFor] = useState<{ id: string; title: string } | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const focus = profile?.role_focus ?? "product";
   const visible = useMemo(
-    () => (mineOnly ? recommendations.filter((r) => r.owner === focus) : recommendations),
-    [recommendations, mineOnly, focus]
+    () =>
+      recommendations
+        .filter((r) => (mineOnly ? r.owner === focus : true))
+        .filter((r) => (decidedOnly ? !!decisions[r.id] : true)),
+    [recommendations, mineOnly, focus, decidedOnly, decisions]
   );
 
   const generate = async () => {
@@ -87,6 +105,14 @@ const ActionRadarPage = () => {
             onClick={() => setMineOnly((v) => !v)}
           >
             {mineOnly ? `Showing ${ROLE_FOCUS_LABELS[focus]}` : "Filter to my role"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={decidedOnly}
+            onClick={() => setDecidedOnly((v) => !v)}
+          >
+            My decisions
           </Button>
           <Button size="sm" onClick={generate} disabled={generating}>
             {generating && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
@@ -135,7 +161,7 @@ const ActionRadarPage = () => {
                 </div>
                 <div className="space-y-3">
                   {rows.map((r) => {
-                    const status = statuses[r.id] ?? "open";
+                    const decision = decisions[r.id];
                     return (
                       <SurfaceCard
                         key={r.id}
@@ -165,6 +191,15 @@ const ActionRadarPage = () => {
                           />
                           <MetaChip label="Confidence" value={`${r.confidence}%`} />
                           <MetaChip
+                            label="Signal"
+                            value={
+                              <span className="inline-flex items-center gap-1">
+                                <PolarityIcon polarity={r.polarity} />
+                                {SIGNAL_TYPE_LABELS[r.signal_type] ?? r.signal_type}
+                              </span>
+                            }
+                          />
+                          <MetaChip
                             label="Owner"
                             value={<span className="capitalize">{r.owner}</span>}
                           />
@@ -181,24 +216,43 @@ const ActionRadarPage = () => {
                             confidence={r.confidence}
                             evidence={Array.isArray(r.evidence) ? (r.evidence as string[]) : []}
                             why={r.rationale ?? undefined}
+                            breakdown={r.score_breakdown ?? undefined}
                           />
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3">
-                          {STATUSES.map((s) => (
-                            <button
-                              key={s}
-                              onClick={() => setStatus.mutate({ id: r.id, status: s })}
-                              aria-pressed={status === s}
-                              className={cn(
-                                "rounded-md border px-2 py-1 text-xs transition-colors",
-                                status === s
-                                  ? "border-primary/40 bg-primary/10 text-primary"
-                                  : "border-border text-muted-foreground hover:bg-surface-3"
+                        <div className="mt-4 border-t border-border-subtle pt-3">
+                          {decision ? (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                              <span className="font-medium text-primary">
+                                {DECISION_LABELS[decision.decision]}
+                              </span>
+                              {decision.reason && (
+                                <span className="text-muted-foreground">{decision.reason}</span>
                               )}
+                              {decision.review_date && (
+                                <span className="text-muted-foreground">
+                                  Review{" "}
+                                  {new Date(decision.review_date).toLocaleDateString(undefined, {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => setWorkspaceFor({ id: r.id, title: r.title })}
+                                className="ml-auto text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                              >
+                                Change decision
+                              </button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setWorkspaceFor({ id: r.id, title: r.title })}
                             >
-                              {STATUS_LABELS[s]}
-                            </button>
-                          ))}
+                              Take action
+                            </Button>
+                          )}
                         </div>
                       </SurfaceCard>
                     );
@@ -210,6 +264,15 @@ const ActionRadarPage = () => {
         </div>
       )}
 
+      {workspaceFor && (
+        <DecisionWorkspace
+          open={!!workspaceFor}
+          onOpenChange={(o) => !o && setWorkspaceFor(null)}
+          recommendationId={workspaceFor.id}
+          signalTitle={workspaceFor.title}
+          existing={decisions[workspaceFor.id]}
+        />
+      )}
     </div>
   );
 };
