@@ -59,11 +59,20 @@ export const reviewState = (
   return due < startOfDay(today) ? "overdue" : "scheduled";
 };
 
-export const addDays = (dateStr: string | null | undefined, days: number): string => {
-  const base = dateStr ? new Date(`${dateStr}T00:00:00`) : new Date();
-  const d = Number.isNaN(base.getTime()) ? new Date() : base;
-  const next = new Date(d.getTime());
+/** Extend a review date by N days, counting from today when the date is already past. */
+export const addDays = (
+  dateStr: string | null | undefined,
+  days: number,
+  today: Date = new Date()
+): string => {
+  const parsed = dateStr ? new Date(`${dateStr}T00:00:00`) : null;
+  const base =
+    parsed && !Number.isNaN(parsed.getTime()) && parsed > startOfDay(today)
+      ? parsed
+      : startOfDay(today);
+  const next = new Date(base.getTime());
   next.setDate(next.getDate() + days);
-  const from = next < new Date() ? new Date() : next;
-  return from.toISOString().slice(0, 10);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(
+    next.getDate()
+  ).padStart(2, "0")}`;
 };
