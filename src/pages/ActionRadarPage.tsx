@@ -274,8 +274,9 @@ const ActionRadarPage = () => {
           open={!!workspaceFor}
           onOpenChange={(o) => !o && setWorkspaceFor(null)}
           recommendationId={workspaceFor.id}
+          signalKey={workspaceFor.signalKey}
           signalTitle={workspaceFor.title}
-          existing={decisions[workspaceFor.id]}
+          existing={decisions[workspaceFor.signalKey] ?? decisions[workspaceFor.id]}
         />
       )}
     </div>
