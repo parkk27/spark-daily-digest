@@ -6,7 +6,7 @@ export type RecommendationSection = "act_now" | "watch" | "deprioritize";
 
 export interface Recommendation {
   id: string;
-  signal_key: string | null;
+  signal_key?: string | null;
   date: string;
   section: RecommendationSection;
   title: string;
