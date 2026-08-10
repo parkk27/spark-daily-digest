@@ -16,7 +16,6 @@ import {
   type RecommendationSection,
 } from "@/hooks/useRecommendations";
 import { useProfile, ROLE_FOCUS_LABELS } from "@/hooks/useProfile";
-import { cn } from "@/lib/utils";
 import SurfaceCard from "@/components/ui/surface-card";
 import MetaChip from "@/components/ui/meta-chip";
 import EmptyState from "@/components/ui/empty-state";
