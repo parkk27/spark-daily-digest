@@ -131,8 +131,14 @@ Deno.serve(async (req) => {
       };
     });
 
-    await supabase.from("recommendations").delete().eq("date", snap.date);
-    const { error } = await supabase.from("recommendations").insert(rows);
+    // Upsert on the stable signal identity — never delete rows, so Decision Records
+    // stay attached to their signal across radar refreshes.
+    const deduped = Array.from(
+      new Map(rows.map((r) => [`${r.date}|${r.signal_key}`, r])).values(),
+    );
+    const { error } = await supabase
+      .from("recommendations")
+      .upsert(deduped, { onConflict: "date,signal_key" });
     if (error) throw error;
 
     return new Response(JSON.stringify({ success: true, count: rows.length, date: snap.date }), {
