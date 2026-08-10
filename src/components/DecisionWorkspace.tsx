@@ -138,6 +138,24 @@ const DecisionWorkspace = ({
 
         {decision && (
           <div className="space-y-4 border-t border-border-subtle pt-4">
+            {isChange && (
+              <div className="space-y-1.5">
+                <Label htmlFor="decision-change-reason" className="text-xs">
+                  Why is this changing from “{DECISION_LABELS[existing!.decision]}”?{" "}
+                  <span className="text-muted-foreground">(required)</span>
+                </Label>
+                <Input
+                  id="decision-change-reason"
+                  value={changeReason}
+                  onChange={(e) => setChangeReason(e.target.value)}
+                  placeholder="New evidence from customer calls"
+                />
+                <p className="text-[0.7rem] text-muted-foreground">
+                  The previous decision is preserved in the decision history.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="decision-reason" className="text-xs">
                 Reason <span className="text-muted-foreground">(required)</span>
