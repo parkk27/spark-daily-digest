@@ -4,6 +4,7 @@ import SeoHead from "@/components/SeoHead";
 import EvidencePopover from "@/components/EvidencePopover";
 import BookmarkButton from "@/components/BookmarkButton";
 import DecisionWorkspace from "@/components/DecisionWorkspace";
+import DecisionSummary from "@/components/DecisionSummary";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,15 +12,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useRecommendations,
   useDecisionRecords,
-  DECISION_LABELS,
   SECTION_LABELS,
   type RecommendationSection,
 } from "@/hooks/useRecommendations";
+import { signalIdOf, reviewState } from "@/lib/signalIdentity";
 import { useProfile, ROLE_FOCUS_LABELS } from "@/hooks/useProfile";
 import SurfaceCard from "@/components/ui/surface-card";
 import MetaChip from "@/components/ui/meta-chip";
 import EmptyState from "@/components/ui/empty-state";
 import SkeletonCard from "@/components/ui/skeleton-card";
+
 
 
 const SECTIONS: RecommendationSection[] = ["act_now", "watch", "deprioritize"];
