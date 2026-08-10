@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
 
       return {
         date: snap.date,
+        signal_key: buildSignalKey(a.source, String(a.title ?? ""), a.url ?? a.link),
         section,
         title: a.title,
         summary: a.summary,
