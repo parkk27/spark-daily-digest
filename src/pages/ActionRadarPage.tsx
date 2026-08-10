@@ -126,6 +126,14 @@ const ActionRadarPage = () => {
           >
             My decisions
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={reviewOnly}
+            onClick={() => setReviewOnly((v) => !v)}
+          >
+            Needs review
+          </Button>
           <Button size="sm" onClick={generate} disabled={generating}>
             {generating && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Refresh radar
@@ -173,7 +181,7 @@ const ActionRadarPage = () => {
                 </div>
                 <div className="space-y-3">
                   {rows.map((r) => {
-                    const decision = decisions[r.id];
+                    const decision = decisions[signalIdOf(r)];
                     return (
                       <SurfaceCard
                         key={r.id}
