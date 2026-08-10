@@ -36,9 +36,9 @@ const SIGNAL_TYPE_LABELS: Record<string, string> = {
 
 const PolarityIcon = ({ polarity }: { polarity: string }) => {
   if (polarity === "opportunity")
-    return <ArrowUp className="h-3.5 w-3.5 text-growing" aria-label="Opportunity" />;
+    return <ArrowUp className="h-3.5 w-3.5 text-status-growing" aria-label="Opportunity" />;
   if (polarity === "threat")
-    return <AlertTriangle className="h-3.5 w-3.5 text-declining" aria-label="Threat" />;
+    return <AlertTriangle className="h-3.5 w-3.5 text-status-declining" aria-label="Threat" />;
   return <Minus className="h-3.5 w-3.5 text-muted-foreground" aria-label="Neutral" />;
 };
 
