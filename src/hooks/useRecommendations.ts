@@ -120,3 +120,71 @@ export function useRecommendationStatus() {
 
   return { statuses: query.data ?? {}, isLoading: query.isLoading, setStatus };
 }
+
+export interface DecisionInput {
+  recommendationId: string;
+  decision: DecisionKind;
+  reason: string;
+  stakeholders: string[];
+  next_step?: string | null;
+  review_date?: string | null;
+}
+
+/** Decision Records — the auditable "what did we decide" layer on top of recommendations. */
+export function useDecisionRecords() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["decision-records", user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<Record<string, DecisionRecord>> => {
+      const { data, error } = await supabase
+        .from("decision_records")
+        .select("id, recommendation_id, decision, reason, stakeholders, next_step, review_date, status, updated_at");
+      if (error) throw error;
+      return Object.fromEntries(
+        (data ?? []).map((r) => [r.recommendation_id, r as unknown as DecisionRecord])
+      );
+    },
+  });
+
+  const upsertDecision = useMutation({
+    mutationFn: async (input: DecisionInput) => {
+      const sync = DECISION_SYNC[input.decision];
+      const { error } = await supabase.from("decision_records").upsert(
+        {
+          user_id: user!.id,
+          recommendation_id: input.recommendationId,
+          decision: input.decision,
+          reason: input.reason,
+          stakeholders: input.stakeholders,
+          next_step: input.next_step ?? null,
+          review_date: input.review_date ?? null,
+          status: sync.record,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,recommendation_id" }
+      );
+      if (error) throw error;
+
+      const { error: statusError } = await supabase.from("recommendation_status").upsert(
+        {
+          user_id: user!.id,
+          recommendation_id: input.recommendationId,
+          status: sync.mirrored,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,recommendation_id" }
+      );
+      if (statusError) throw statusError;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decision-records", user?.id] });
+      qc.invalidateQueries({ queryKey: ["recommendation-status", user?.id] });
+    },
+  });
+
+  return { decisions: query.data ?? {}, isLoading: query.isLoading, upsertDecision };
+}
+
