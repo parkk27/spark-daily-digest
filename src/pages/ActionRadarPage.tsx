@@ -51,7 +51,12 @@ const ActionRadarPage = () => {
   const qc = useQueryClient();
   const [mineOnly, setMineOnly] = useState(false);
   const [decidedOnly, setDecidedOnly] = useState(false);
-  const [workspaceFor, setWorkspaceFor] = useState<{ id: string; title: string } | null>(null);
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const [workspaceFor, setWorkspaceFor] = useState<{
+    id: string;
+    signalKey: string;
+    title: string;
+  } | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const focus = profile?.role_focus ?? "product";
@@ -59,9 +64,15 @@ const ActionRadarPage = () => {
     () =>
       recommendations
         .filter((r) => (mineOnly ? r.owner === focus : true))
-        .filter((r) => (decidedOnly ? !!decisions[r.id] : true)),
-    [recommendations, mineOnly, focus, decidedOnly, decisions]
+        .filter((r) => (decidedOnly ? !!decisions[signalIdOf(r)] : true))
+        .filter((r) => {
+          if (!reviewOnly) return true;
+          const d = decisions[signalIdOf(r)];
+          return !!d && reviewState(d.review_date, d.status) === "overdue";
+        }),
+    [recommendations, mineOnly, focus, decidedOnly, reviewOnly, decisions]
   );
+
 
   const generate = async () => {
     setGenerating(true);
