@@ -6,6 +6,7 @@ export type RecommendationSection = "act_now" | "watch" | "deprioritize";
 
 export interface Recommendation {
   id: string;
+  signal_key: string | null;
   date: string;
   section: RecommendationSection;
   title: string;
@@ -33,7 +34,8 @@ export type DecisionKind =
 
 export interface DecisionRecord {
   id: string;
-  recommendation_id: string;
+  recommendation_id: string | null;
+  signal_key: string | null;
   decision: DecisionKind;
   reason: string | null;
   stakeholders: string[];
@@ -42,6 +44,18 @@ export interface DecisionRecord {
   status: string;
   updated_at: string;
 }
+
+export interface DecisionHistoryEntry {
+  id: string;
+  signal_key: string | null;
+  decision: DecisionKind;
+  reason: string | null;
+  change_reason: string | null;
+  review_date: string | null;
+  status: string | null;
+  changed_at: string;
+}
+
 
 export const DECISION_LABELS: Record<DecisionKind, string> = {
   investigate: "Investigate",
