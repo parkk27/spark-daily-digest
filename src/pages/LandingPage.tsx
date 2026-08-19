@@ -25,7 +25,10 @@ const LandingPage = () => (
     />
 
     <section className="container relative max-w-3xl py-20 text-center sm:py-28">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        Prepared by Kunal Parekh
+      </p>
+      <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
         <Zap className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Updated continuously
       </span>
       <h1 className="mt-6 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
@@ -48,8 +51,8 @@ const LandingPage = () => (
           <Link to="/signup">Create free account</Link>
         </Button>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">No sign-up required to explore the demo.</p>
     </section>
+
 
     <section className="container relative pb-24">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
