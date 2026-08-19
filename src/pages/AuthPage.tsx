@@ -122,20 +122,20 @@ const AuthPage = () => {
     authLog("oauth_start", { provider: "google" });
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: APP_URL,
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: authCallbackUrl(next) },
       });
-      if (result.error) {
-        setError(friendlyAuthError(result.error));
-        authLogError("oauth_callback", result.error, {
+      if (err) {
+        setError(friendlyAuthError(err));
+        authLogError("oauth_callback", err, {
           provider: "google",
-          reason: authErrorCode(result.error),
+          reason: authErrorCode(err),
         });
         return;
       }
-      if (result.redirected) return; // browser navigates to Google
-      authLog("oauth_callback", { provider: "google", status: "success" });
-      navigate(afterAuth, { replace: true });
+      // Browser navigates to Google; no further action needed.
+      authLog("oauth_callback", { provider: "google", status: "redirected" });
     } catch (err) {
       setError(friendlyAuthError(err));
       authLogError("oauth_callback", err, { provider: "google", reason: authErrorCode(err) });
