@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Check, Loader2, MailCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import SeoHead from "@/components/SeoHead";
 import AuthStoryPanel from "@/components/auth/AuthStoryPanel";
 import AuthFooterLinks from "@/components/auth/AuthFooterLinks";
 import { AUTH_MESSAGES, authErrorCode, friendlyAuthError, isValidEmail } from "@/lib/authErrors";
-import { APP_URL, authCallbackUrl } from "@/config";
+import { authCallbackUrl } from "@/config";
 import { authLog, authLogError, clearCallbackError, readCallbackError } from "@/lib/authLog";
 
 const TRUST = [
@@ -123,20 +122,20 @@ const AuthPage = () => {
     authLog("oauth_start", { provider: "google" });
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: APP_URL,
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: authCallbackUrl(next) },
       });
-      if (result.error) {
-        setError(friendlyAuthError(result.error));
-        authLogError("oauth_callback", result.error, {
+      if (err) {
+        setError(friendlyAuthError(err));
+        authLogError("oauth_callback", err, {
           provider: "google",
-          reason: authErrorCode(result.error),
+          reason: authErrorCode(err),
         });
         return;
       }
-      if (result.redirected) return; // browser navigates to Google
-      authLog("oauth_callback", { provider: "google", status: "success" });
-      navigate(afterAuth, { replace: true });
+      // Browser navigates to Google; no further action needed.
+      authLog("oauth_callback", { provider: "google", status: "redirected" });
     } catch (err) {
       setError(friendlyAuthError(err));
       authLogError("oauth_callback", err, { provider: "google", reason: authErrorCode(err) });
