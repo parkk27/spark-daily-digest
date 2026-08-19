@@ -12,6 +12,44 @@ const FEATURES = [
   { icon: Zap, title: "Refreshed continuously", body: "An automated pipeline ingests, filters, scores and summarises every few hours." },
 ];
 
+const JOURNEY = [
+  {
+    title: "Read the brief",
+    get: "The single biggest change in the ecosystem today.",
+    act: "Decide whether it touches your roadmap this quarter.",
+    to: "/preview",
+    cta: "Open sample brief",
+  },
+  {
+    title: "Check momentum",
+    get: "Which topics are accelerating, emerging or fading.",
+    act: "Pick the one or two themes worth tracking.",
+    to: "/signup",
+    cta: "Sign in for trends",
+  },
+  {
+    title: "Open Compare",
+    get: "Where Fabric Spark stands against Databricks, BigQuery, EMR and Snowflake.",
+    act: "Find the capability gap that matters to your buyer.",
+    to: "/preview/compare",
+    cta: "See the workspace",
+  },
+  {
+    title: "Work the radar",
+    get: "Signals sorted into act now, watch and deprioritize.",
+    act: "Log a decision with an owner and a review date.",
+    to: "/preview/radar",
+    cta: "See the radar",
+  },
+  {
+    title: "Ask the copilot",
+    get: "Grounded, cited answers across the ingested corpus.",
+    act: "Arm product, sales or strategy with the narrative.",
+    to: "/signup",
+    cta: "Sign in to ask",
+  },
+];
+
 const LandingPage = () => (
   <div className="relative overflow-hidden">
     <SeoHead
@@ -25,7 +63,10 @@ const LandingPage = () => (
     />
 
     <section className="container relative max-w-3xl py-20 text-center sm:py-28">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        Prepared by Kunal Parekh
+      </p>
+      <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
         <Zap className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Updated continuously
       </span>
       <h1 className="mt-6 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
@@ -48,8 +89,8 @@ const LandingPage = () => (
           <Link to="/signup">Create free account</Link>
         </Button>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">No sign-up required to explore the demo.</p>
     </section>
+
 
     <section className="container relative pb-24">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -61,6 +102,44 @@ const LandingPage = () => (
           </div>
         ))}
       </div>
+
+      <div className="mt-16">
+        <h2 className="text-center text-xl font-semibold tracking-tight text-foreground">
+          How to act on what you receive
+        </h2>
+        <p className="mx-auto mt-2 max-w-lg text-center text-sm text-muted-foreground">
+          A five-step path from today's signal to a logged decision.
+        </p>
+
+        <ol className="mx-auto mt-8 max-w-3xl space-y-3">
+          {JOURNEY.map((step, i) => (
+            <li
+              key={step.title}
+              className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-sm font-semibold text-primary">
+                {i + 1}
+              </span>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-foreground">{step.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-secondary-foreground">{step.get}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  <span className="text-primary">Next:</span> {step.act}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link to={step.to}>{step.cta}</Link>
+              </Button>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mx-auto mt-6 max-w-xl text-center text-sm text-muted-foreground">
+          The outcome is a decision with an owner — not more reading.
+        </p>
+      </div>
+
+
 
       <div className="mt-10 rounded-xl border border-border bg-card/60 p-8 text-center">
         <h2 className="text-lg font-semibold text-foreground">Ready when you are</h2>
