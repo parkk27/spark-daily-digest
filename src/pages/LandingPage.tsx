@@ -103,6 +103,44 @@ const LandingPage = () => (
         ))}
       </div>
 
+      <div className="mt-16">
+        <h2 className="text-center text-xl font-semibold tracking-tight text-foreground">
+          How to act on what you receive
+        </h2>
+        <p className="mx-auto mt-2 max-w-lg text-center text-sm text-muted-foreground">
+          A five-step path from today's signal to a logged decision.
+        </p>
+
+        <ol className="mx-auto mt-8 max-w-3xl space-y-3">
+          {JOURNEY.map((step, i) => (
+            <li
+              key={step.title}
+              className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-sm font-semibold text-primary">
+                {i + 1}
+              </span>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-foreground">{step.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-secondary-foreground">{step.get}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  <span className="text-primary">Next:</span> {step.act}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link to={step.to}>{step.cta}</Link>
+              </Button>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mx-auto mt-6 max-w-xl text-center text-sm text-muted-foreground">
+          The outcome is a decision with an owner — not more reading.
+        </p>
+      </div>
+
+
+
       <div className="mt-10 rounded-xl border border-border bg-card/60 p-8 text-center">
         <h2 className="text-lg font-semibold text-foreground">Ready when you are</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
