@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Check, Loader2, MailCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
