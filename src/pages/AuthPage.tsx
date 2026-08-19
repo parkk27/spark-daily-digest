@@ -12,7 +12,7 @@ import SeoHead from "@/components/SeoHead";
 import AuthStoryPanel from "@/components/auth/AuthStoryPanel";
 import AuthFooterLinks from "@/components/auth/AuthFooterLinks";
 import { AUTH_MESSAGES, authErrorCode, friendlyAuthError, isValidEmail } from "@/lib/authErrors";
-import { APP_URL, authCallbackUrl } from "@/config";
+import { authCallbackUrl } from "@/config";
 import { authLog, authLogError, clearCallbackError, readCallbackError } from "@/lib/authLog";
 
 const TRUST = [
