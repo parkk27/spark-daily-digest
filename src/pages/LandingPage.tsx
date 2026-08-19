@@ -12,6 +12,44 @@ const FEATURES = [
   { icon: Zap, title: "Refreshed continuously", body: "An automated pipeline ingests, filters, scores and summarises every few hours." },
 ];
 
+const JOURNEY = [
+  {
+    title: "Read the brief",
+    get: "The single biggest change in the ecosystem today.",
+    act: "Decide whether it touches your roadmap this quarter.",
+    to: "/preview",
+    cta: "Open sample brief",
+  },
+  {
+    title: "Check momentum",
+    get: "Which topics are accelerating, emerging or fading.",
+    act: "Pick the one or two themes worth tracking.",
+    to: "/signup",
+    cta: "Sign in for trends",
+  },
+  {
+    title: "Open Compare",
+    get: "Where Fabric Spark stands against Databricks, BigQuery, EMR and Snowflake.",
+    act: "Find the capability gap that matters to your buyer.",
+    to: "/preview/compare",
+    cta: "See the workspace",
+  },
+  {
+    title: "Work the radar",
+    get: "Signals sorted into act now, watch and deprioritize.",
+    act: "Log a decision with an owner and a review date.",
+    to: "/preview/radar",
+    cta: "See the radar",
+  },
+  {
+    title: "Ask the copilot",
+    get: "Grounded, cited answers across the ingested corpus.",
+    act: "Arm product, sales or strategy with the narrative.",
+    to: "/signup",
+    cta: "Sign in to ask",
+  },
+];
+
 const LandingPage = () => (
   <div className="relative overflow-hidden">
     <SeoHead
