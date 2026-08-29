@@ -83,7 +83,14 @@ export interface DecisionHistoryEntry {
   review_date: string | null;
   status: string | null;
   changed_at: string;
+  action: string | null;
+  action_owner: string | null;
+  action_due_date: string | null;
+  outcome: string | null;
+  outcome_notes: string | null;
+  completed_at: string | null;
 }
+
 
 
 export const DECISION_LABELS: Record<DecisionKind, string> = {
