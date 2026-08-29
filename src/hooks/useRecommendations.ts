@@ -225,6 +225,12 @@ export function useDecisionRecords() {
       next_step: prev.next_step,
       review_date: prev.review_date,
       status: prev.status,
+      action: prev.action,
+      action_owner: prev.action_owner,
+      action_due_date: prev.action_due_date,
+      outcome: prev.outcome,
+      outcome_notes: prev.outcome_notes,
+      completed_at: prev.completed_at,
       change_reason: changeReason ?? null,
     });
     if (error) throw error;
