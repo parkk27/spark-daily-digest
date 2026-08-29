@@ -125,7 +125,20 @@ const DecisionWorkspace = ({
           <DialogDescription className="text-xs">{signalTitle}</DialogDescription>
         </DialogHeader>
 
+        {reviewContext && (
+          <div className="rounded-lg border border-border-subtle bg-surface-3/50 p-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-wide text-foreground">
+              Step 1 — Review
+            </p>
+            {reviewContext}
+          </div>
+        )}
+
+        <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-foreground">
+          Step 2 — Decide
+        </p>
         <div className="grid gap-2">
+
           {DECISIONS.map((d) => (
             <button
               key={d}
