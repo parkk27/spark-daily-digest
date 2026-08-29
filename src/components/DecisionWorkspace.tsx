@@ -57,6 +57,7 @@ const DecisionWorkspace = ({
   signalKey,
   signalTitle,
   existing,
+  reviewContext,
 }: Props) => {
   const { upsertDecision } = useDecisionRecords();
   const [decision, setDecision] = useState<DecisionKind | null>(null);
