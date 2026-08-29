@@ -84,18 +84,28 @@ const RadarCard = ({
       className="p-5"
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded-md border border-border bg-surface-3 px-1.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
-              {WORKFLOW_STATE_LABELS[lane]}
-            </span>
-            {overdue && (
-              <span className="rounded-md border border-status-declining/30 bg-status-declining/10 px-1.5 py-0.5 text-[0.7rem] font-medium text-status-declining">
-                Review overdue
+        <div className="flex items-start gap-2.5">
+          {selectable && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(v) => onSelectChange?.(v === true)}
+              aria-label={`Select ${r.title}`}
+              className="mt-1"
+            />
+          )}
+          <div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-md border border-border bg-surface-3 px-1.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
+                {WORKFLOW_STATE_LABELS[lane]}
               </span>
-            )}
+              {overdue && (
+                <span className="rounded-md border border-status-declining/30 bg-status-declining/10 px-1.5 py-0.5 text-[0.7rem] font-medium text-status-declining">
+                  Review overdue
+                </span>
+              )}
+            </div>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{r.title}</h3>
           </div>
-          <h3 className="mt-2 text-sm font-semibold text-foreground">{r.title}</h3>
         </div>
         <BookmarkButton
           kind="recommendation"
@@ -104,6 +114,7 @@ const RadarCard = ({
           source={r.related_vendor}
         />
       </div>
+
 
       {ctx && (
         <p className="mt-2 text-xs text-muted-foreground">
