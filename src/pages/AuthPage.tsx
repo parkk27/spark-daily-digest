@@ -106,7 +106,7 @@ const AuthPage = () => {
     if (busy) return; // prevent duplicate requests
     setBusy(true);
     setError(null);
-    authLog("otp_request", { returnUrl });
+    authLog("magic_link_requested", { returnUrl });
     try {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: address,
