@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Radar, Loader2 } from "lucide-react";
+import { Radar, Loader2, RefreshCw, Share2, CheckSquare } from "lucide-react";
 import SeoHead from "@/components/SeoHead";
 import DecisionWorkspace from "@/components/DecisionWorkspace";
 import CompleteActionDialog from "@/components/radar/CompleteActionDialog";
 import RadarCard from "@/components/radar/RadarCard";
+import NotificationsBell from "@/components/radar/NotificationsBell";
+import BulkActionBar from "@/components/radar/BulkActionBar";
+import RadarExportDialog from "@/components/radar/RadarExportDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,12 +57,31 @@ const ActionRadarPage = () => {
   const [completeFor, setCompleteFor] = useState<{ signalKey: string; title: string } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [delta, setDelta] = useState<RefreshDelta | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [liveChange, setLiveChange] = useState(0);
 
   const focus = profile?.role_focus ?? "product";
 
   useEffect(() => {
     track("radar_view");
   }, [track]);
+
+  /** Live updates: new or materially changed signals arriving after this page loaded. */
+  useEffect(() => {
+    const channel = supabase
+      .channel("radar-recommendations")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recommendations" },
+        () => setLiveChange((n) => n + 1)
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   /** Every signal with its derived lifecycle lane. */
   const laned = useMemo(
@@ -120,6 +142,7 @@ const ActionRadarPage = () => {
       description: `${data.count} signals scored against the latest ingestion.`,
     });
     qc.invalidateQueries({ queryKey: ["recommendations"] });
+    setLiveChange(0);
   };
 
   const openWorkspace = (item: (typeof laned)[number]) => {
@@ -135,6 +158,22 @@ const ActionRadarPage = () => {
         </>
       ),
     });
+  };
+
+  const selected = useMemo(
+    () => visible.filter((x) => selectedKeys.includes(signalIdOf(x.r))),
+    [visible, selectedKeys]
+  );
+
+  const toggleSelected = (key: string, on: boolean) =>
+    setSelectedKeys((prev) => (on ? [...new Set([...prev, key])] : prev.filter((k) => k !== key)));
+
+  const laneCounts: Record<Lane, number> = {
+    act_now: counts.act_now,
+    needs_review: counts.needs_review,
+    tracking: counts.tracking,
+    action_in_progress: counts.action_in_progress,
+    completed: counts.completed,
   };
 
   const summaryStats: { label: string; value: number; lane?: Lane }[] = [
@@ -171,10 +210,37 @@ const ActionRadarPage = () => {
               decision, action and outcome. {counts.total} signals in scope.
             </p>
           </div>
-          <Button size="sm" onClick={generate} disabled={generating}>
-            {generating && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-            Refresh radar
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <NotificationsBell
+              recommendations={recommendations}
+              decisions={decisions}
+              onOpenSignal={(reminder) => {
+                const item = laned.find((x) => signalIdOf(x.r) === reminder.signalKey);
+                if (item) openWorkspace(item);
+                track("radar_reminder_opened", reminder.signalKey, { kind: reminder.kind });
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              aria-pressed={selectMode}
+              onClick={() => {
+                setSelectMode((v) => !v);
+                setSelectedKeys([]);
+                track("radar_bulk_mode", selectMode ? "off" : "on");
+              }}
+            >
+              <CheckSquare className="mr-1.5 h-4 w-4" />
+              {selectMode ? "Exit selection" : "Select"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+              <Share2 className="mr-1.5 h-4 w-4" /> Export
+            </Button>
+            <Button size="sm" onClick={generate} disabled={generating}>
+              {generating && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Refresh radar
+            </Button>
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -257,6 +323,27 @@ const ActionRadarPage = () => {
         )}
       </header>
 
+      {liveChange > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <RefreshCw className="h-4 w-4 text-primary" aria-hidden="true" />
+          <p className="text-xs text-foreground">
+            New radar data has arrived since you loaded this page.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              qc.invalidateQueries({ queryKey: ["recommendations"] });
+              setLiveChange(0);
+              track("radar_live_reload");
+            }}
+          >
+            Load updates
+          </Button>
+        </div>
+      )}
+
       {themes.length > 0 && (
         <SurfaceCard className="mb-6 p-4">
           <p className="eyebrow text-muted-foreground">Emerging themes</p>
@@ -309,6 +396,10 @@ const ActionRadarPage = () => {
                         lane={x.lane}
                         roleFocus={focus}
                         onReview={() => openWorkspace(x)}
+                        signalKey={signalIdOf(x.r)}
+                        selectable={selectMode}
+                        selected={selectedKeys.includes(signalIdOf(x.r))}
+                        onSelectChange={(on) => toggleSelected(signalIdOf(x.r), on)}
                         onCompleteAction={() =>
                           setCompleteFor({ signalKey: signalIdOf(x.r), title: x.r.title })
                         }
@@ -321,6 +412,32 @@ const ActionRadarPage = () => {
           })}
         </div>
       )}
+
+      {selectMode && selected.length > 0 && (
+        <BulkActionBar
+          targets={selected.map((x) => ({
+            recommendationId: x.r.id,
+            signalKey: signalIdOf(x.r),
+          }))}
+          onClear={() => setSelectedKeys([])}
+          onApplied={(decision, count) => {
+            setSelectedKeys([]);
+            track("radar_bulk_decision", decision, { count });
+          }}
+        />
+      )}
+
+      <RadarExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        visible={visible.map((x) => x.r)}
+        selected={selected.map((x) => x.r)}
+        decisions={decisions}
+        counts={laneCounts}
+        onExported={(format, scope, count) =>
+          track("radar_export", format, { scope, count })
+        }
+      />
 
       {workspaceFor && (
         <DecisionWorkspace

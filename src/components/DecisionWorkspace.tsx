@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { OUR_PLATFORM } from "@/lib/executive";
+import SignalHistory from "@/components/radar/SignalHistory";
 import {
   ACTION_SUGGESTIONS,
   DECISION_DESCRIPTIONS,
@@ -290,6 +291,13 @@ const DecisionWorkspace = ({
             </div>
           </div>
         )}
+
+        <div className="border-t border-border-subtle pt-3">
+          <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wide text-foreground">
+            History
+          </p>
+          <SignalHistory signalKey={signalKey} current={existing} />
+        </div>
 
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>

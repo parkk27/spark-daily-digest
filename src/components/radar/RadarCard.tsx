@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ArrowUp, AlertTriangle, ChevronDown, Minus } from "lucide-react";
+import { ArrowUp, AlertTriangle, ChevronDown, History, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SurfaceCard from "@/components/ui/surface-card";
 import MetaChip from "@/components/ui/meta-chip";
 import EvidencePopover from "@/components/EvidencePopover";
 import BookmarkButton from "@/components/BookmarkButton";
+import { Checkbox } from "@/components/ui/checkbox";
+import SignalHistory from "@/components/radar/SignalHistory";
 import DecisionSummary from "@/components/DecisionSummary";
 import { cn } from "@/lib/utils";
 import { DECISION_LABELS, type DecisionRecord, type Recommendation } from "@/hooks/useRecommendations";
@@ -47,6 +49,11 @@ interface Props {
   roleFocus: string;
   onReview: () => void;
   onCompleteAction: () => void;
+  /** Bulk selection (My Radar) — off unless selection mode is active. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectChange?: (selected: boolean) => void;
+  signalKey: string;
 }
 
 /** Radar Card 2.0 — signal, competitive context, impact, evidence, workflow state, CTA. */
@@ -57,12 +64,18 @@ const RadarCard = ({
   roleFocus,
   onReview,
   onCompleteAction,
+  selectable = false,
+  selected = false,
+  onSelectChange,
+  signalKey,
 }: Props) => {
   const [open, setOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const ctx = competitiveContext(r);
   const impacts = impactBands(r);
   const reasons = whyAmISeeingThis(r, roleFocus);
   const overdue = isReviewDue(decision);
+
 
   return (
     <SurfaceCard
@@ -73,18 +86,28 @@ const RadarCard = ({
       className="p-5"
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="rounded-md border border-border bg-surface-3 px-1.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
-              {WORKFLOW_STATE_LABELS[lane]}
-            </span>
-            {overdue && (
-              <span className="rounded-md border border-status-declining/30 bg-status-declining/10 px-1.5 py-0.5 text-[0.7rem] font-medium text-status-declining">
-                Review overdue
+        <div className="flex items-start gap-2.5">
+          {selectable && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(v) => onSelectChange?.(v === true)}
+              aria-label={`Select ${r.title}`}
+              className="mt-1"
+            />
+          )}
+          <div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-md border border-border bg-surface-3 px-1.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
+                {WORKFLOW_STATE_LABELS[lane]}
               </span>
-            )}
+              {overdue && (
+                <span className="rounded-md border border-status-declining/30 bg-status-declining/10 px-1.5 py-0.5 text-[0.7rem] font-medium text-status-declining">
+                  Review overdue
+                </span>
+              )}
+            </div>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{r.title}</h3>
           </div>
-          <h3 className="mt-2 text-sm font-semibold text-foreground">{r.title}</h3>
         </div>
         <BookmarkButton
           kind="recommendation"
@@ -93,6 +116,7 @@ const RadarCard = ({
           source={r.related_vendor}
         />
       </div>
+
 
       {ctx && (
         <p className="mt-2 text-xs text-muted-foreground">
@@ -254,6 +278,24 @@ const RadarCard = ({
             Review &amp; decide
           </Button>
         )}
+
+        <div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 px-2 text-xs text-muted-foreground"
+            onClick={() => setHistoryOpen((v) => !v)}
+            aria-expanded={historyOpen}
+          >
+            <History className="h-3.5 w-3.5" />
+            {historyOpen ? "Hide history" : "Decision & action history"}
+          </Button>
+          {historyOpen && (
+            <div className="mt-2">
+              <SignalHistory signalKey={signalKey} current={decision} />
+            </div>
+          )}
+        </div>
       </div>
     </SurfaceCard>
   );

@@ -83,7 +83,14 @@ export interface DecisionHistoryEntry {
   review_date: string | null;
   status: string | null;
   changed_at: string;
+  action: string | null;
+  action_owner: string | null;
+  action_due_date: string | null;
+  outcome: string | null;
+  outcome_notes: string | null;
+  completed_at: string | null;
 }
+
 
 
 export const DECISION_LABELS: Record<DecisionKind, string> = {
@@ -362,16 +369,76 @@ export function useDecisionRecords() {
     onSuccess: invalidate,
   });
 
+  /**
+   * Apply one decision (and optionally one shared action) to many signals at once.
+   * Each signal still goes through the same archive + upsert path, so the append-only
+   * audit trail and RLS behaviour are identical to a single decision.
+   */
+  const bulkDecision = useMutation({
+    mutationFn: async ({
+      targets,
+      ...input
+    }: Omit<DecisionInput, "recommendationId" | "signalKey"> & {
+      targets: { recommendationId: string; signalKey: string }[];
+    }) => {
+      const sync = DECISION_SYNC[input.decision];
+      let applied = 0;
+      for (const t of targets) {
+        const existing = await findExisting(t.signalKey, t.recommendationId);
+        if (existing) await archive(existing, input.change_reason ?? "Bulk update");
+
+        const payload = {
+          user_id: user!.id,
+          recommendation_id: t.recommendationId,
+          signal_key: t.signalKey,
+          decision: input.decision,
+          reason: input.reason,
+          stakeholders: input.stakeholders,
+          next_step: input.next_step ?? null,
+          review_date: input.review_date ?? null,
+          action: input.action ?? null,
+          action_owner: input.action_owner ?? null,
+          action_due_date: input.action_due_date ?? null,
+          status: sync.record,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error } = existing
+          ? await supabase.from("decision_records").update(payload).eq("id", existing.id)
+          : await supabase.from("decision_records").insert(payload);
+        if (error) throw error;
+
+        const { error: statusError } = await supabase.from("recommendation_status").upsert(
+          {
+            user_id: user!.id,
+            recommendation_id: t.recommendationId,
+            status: sync.mirrored,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,recommendation_id" }
+        );
+        if (statusError) throw statusError;
+        applied += 1;
+      }
+      return applied;
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     decisions: query.data ?? {},
     isLoading: query.isLoading,
     upsertDecision,
+    bulkDecision,
     extendReview,
     resolveDecision,
     completeAction,
   };
 
 }
+
+const HISTORY_COLUMNS =
+  "id, signal_key, decision, reason, change_reason, review_date, status, changed_at, action, action_owner, action_due_date, outcome, outcome_notes, completed_at";
 
 /** Previous decisions for a signal, newest first. */
 export function useDecisionHistory(signalKey?: string | null) {
@@ -382,7 +449,8 @@ export function useDecisionHistory(signalKey?: string | null) {
     queryFn: async (): Promise<DecisionHistoryEntry[]> => {
       const { data, error } = await supabase
         .from("decision_record_history")
-        .select("id, signal_key, decision, reason, change_reason, review_date, status, changed_at")
+        .select(HISTORY_COLUMNS)
+
         .eq("signal_key", signalKey!)
         .order("changed_at", { ascending: false })
         .limit(10);
