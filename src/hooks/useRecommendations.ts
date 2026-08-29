@@ -178,7 +178,8 @@ export interface DecisionInput {
 }
 
 const DECISION_COLUMNS =
-  "id, recommendation_id, signal_key, decision, reason, stakeholders, next_step, review_date, status, updated_at";
+  "id, recommendation_id, signal_key, decision, reason, stakeholders, next_step, review_date, status, updated_at, action, action_owner, action_due_date, outcome, outcome_notes, completed_at";
+
 
 /** Decision Records — the auditable "what did we decide" layer on top of recommendations. */
 export function useDecisionRecords() {
