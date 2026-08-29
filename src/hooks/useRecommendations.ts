@@ -43,7 +43,36 @@ export interface DecisionRecord {
   review_date: string | null;
   status: string;
   updated_at: string;
+  /** Action layer — what happens next, who owns it and when it is due. */
+  action: string | null;
+  action_owner: string | null;
+  action_due_date: string | null;
+  outcome: string | null;
+  outcome_notes: string | null;
+  completed_at: string | null;
 }
+
+export const OUTCOMES = [
+  "Roadmap changed",
+  "Positioning changed",
+  "Customer research completed",
+  "Sales response created",
+  "No change required",
+  "Signal proved irrelevant",
+  "Continue monitoring",
+] as const;
+
+export type Outcome = (typeof OUTCOMES)[number];
+
+export const ACTION_SUGGESTIONS = [
+  "Review competitive battlecard",
+  "Validate roadmap gap",
+  "Interview customers",
+  "Prepare Sales response",
+  "Review technical capability",
+  "Monitor next release",
+];
+
 
 export interface DecisionHistoryEntry {
   id: string;
