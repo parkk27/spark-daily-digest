@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ArrowUp, AlertTriangle, ChevronDown, Minus } from "lucide-react";
+import { ArrowUp, AlertTriangle, ChevronDown, History, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SurfaceCard from "@/components/ui/surface-card";
 import MetaChip from "@/components/ui/meta-chip";
 import EvidencePopover from "@/components/EvidencePopover";
 import BookmarkButton from "@/components/BookmarkButton";
+import { Checkbox } from "@/components/ui/checkbox";
+import SignalHistory from "@/components/radar/SignalHistory";
 import DecisionSummary from "@/components/DecisionSummary";
 import { cn } from "@/lib/utils";
 import { DECISION_LABELS, type DecisionRecord, type Recommendation } from "@/hooks/useRecommendations";
@@ -276,6 +278,24 @@ const RadarCard = ({
             Review &amp; decide
           </Button>
         )}
+
+        <div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 px-2 text-xs text-muted-foreground"
+            onClick={() => setHistoryOpen((v) => !v)}
+            aria-expanded={historyOpen}
+          >
+            <History className="h-3.5 w-3.5" />
+            {historyOpen ? "Hide history" : "Decision & action history"}
+          </Button>
+          {historyOpen && (
+            <div className="mt-2">
+              <SignalHistory signalKey={signalKey} current={decision} />
+            </div>
+          )}
+        </div>
       </div>
     </SurfaceCard>
   );
