@@ -233,7 +233,17 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={copyBriefing}>
               <Copy className="h-4 w-4" /> Copy briefing
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={addToRadar}
+              disabled={adding}
+            >
+              <Radar className="h-4 w-4" /> Add to Action Radar
+            </Button>
             <ShareCardDialog
+
               data={{
                 title: row.capability,
                 why: row.capability_gap,
