@@ -47,6 +47,11 @@ interface Props {
   roleFocus: string;
   onReview: () => void;
   onCompleteAction: () => void;
+  /** Bulk selection (My Radar) — off unless selection mode is active. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectChange?: (selected: boolean) => void;
+  signalKey: string;
 }
 
 /** Radar Card 2.0 — signal, competitive context, impact, evidence, workflow state, CTA. */
@@ -57,12 +62,18 @@ const RadarCard = ({
   roleFocus,
   onReview,
   onCompleteAction,
+  selectable = false,
+  selected = false,
+  onSelectChange,
+  signalKey,
 }: Props) => {
   const [open, setOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const ctx = competitiveContext(r);
   const impacts = impactBands(r);
   const reasons = whyAmISeeingThis(r, roleFocus);
   const overdue = isReviewDue(decision);
+
 
   return (
     <SurfaceCard
