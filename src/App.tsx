@@ -17,6 +17,7 @@ import ContactPage from "@/pages/ContactPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import OAuthConsent from "@/pages/OAuthConsent";
+import AuthCallback from "@/pages/AuthCallback";
 import NotFound from "@/pages/NotFound";
 
 // Protected modules are lazy-loaded so the public landing stays fast.
