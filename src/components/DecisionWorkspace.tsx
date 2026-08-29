@@ -192,15 +192,47 @@ const DecisionWorkspace = ({
 
             <div className="space-y-1.5">
               <Label htmlFor="decision-next-step" className="text-xs">
-                Next step <span className="text-muted-foreground">(optional)</span>
+                Step 3 — Action: what should happen next?{" "}
+                <span className="text-muted-foreground">(optional)</span>
               </Label>
               <Input
                 id="decision-next-step"
                 value={nextStep}
                 onChange={(e) => setNextStep(e.target.value)}
                 placeholder="Interview 5 customers"
+                list="decision-action-suggestions"
+              />
+              <datalist id="decision-action-suggestions">
+                {ACTION_SUGGESTIONS.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="decision-action-owner" className="text-xs">
+                Action owner <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="decision-action-owner"
+                value={actionOwner}
+                onChange={(e) => setActionOwner(e.target.value)}
+                placeholder="Product"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="decision-action-due" className="text-xs">
+                Action due date <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="decision-action-due"
+                type="date"
+                value={actionDue}
+                onChange={(e) => setActionDue(e.target.value)}
+              />
+            </div>
+
 
             <div className="space-y-1.5">
               <span className="text-xs font-medium text-foreground">
