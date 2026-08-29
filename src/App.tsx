@@ -76,6 +76,7 @@ const App = () => (
               <Route path="/signin" element={<AuthPage />} />
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/auth" element={<Navigate to="/signin" replace />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
               {/* Public preview (sample data) */}
