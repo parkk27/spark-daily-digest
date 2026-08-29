@@ -88,13 +88,19 @@ export type Database = {
       }
       decision_record_history: {
         Row: {
+          action: string | null
+          action_due_date: string | null
+          action_owner: string | null
           change_reason: string | null
           changed_at: string
+          completed_at: string | null
           created_at: string
           decision: string
           decision_record_id: string | null
           id: string
           next_step: string | null
+          outcome: string | null
+          outcome_notes: string | null
           reason: string | null
           recommendation_id: string | null
           review_date: string | null
@@ -104,13 +110,19 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          action?: string | null
+          action_due_date?: string | null
+          action_owner?: string | null
           change_reason?: string | null
           changed_at?: string
+          completed_at?: string | null
           created_at?: string
           decision: string
           decision_record_id?: string | null
           id?: string
           next_step?: string | null
+          outcome?: string | null
+          outcome_notes?: string | null
           reason?: string | null
           recommendation_id?: string | null
           review_date?: string | null
@@ -120,13 +132,19 @@ export type Database = {
           user_id: string
         }
         Update: {
+          action?: string | null
+          action_due_date?: string | null
+          action_owner?: string | null
           change_reason?: string | null
           changed_at?: string
+          completed_at?: string | null
           created_at?: string
           decision?: string
           decision_record_id?: string | null
           id?: string
           next_step?: string | null
+          outcome?: string | null
+          outcome_notes?: string | null
           reason?: string | null
           recommendation_id?: string | null
           review_date?: string | null
@@ -147,10 +165,16 @@ export type Database = {
       }
       decision_records: {
         Row: {
+          action: string | null
+          action_due_date: string | null
+          action_owner: string | null
+          completed_at: string | null
           created_at: string
           decision: string
           id: string
           next_step: string | null
+          outcome: string | null
+          outcome_notes: string | null
           reason: string | null
           recommendation_id: string | null
           review_date: string | null
@@ -161,10 +185,16 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          action?: string | null
+          action_due_date?: string | null
+          action_owner?: string | null
+          completed_at?: string | null
           created_at?: string
           decision: string
           id?: string
           next_step?: string | null
+          outcome?: string | null
+          outcome_notes?: string | null
           reason?: string | null
           recommendation_id?: string | null
           review_date?: string | null
@@ -175,10 +205,16 @@ export type Database = {
           user_id: string
         }
         Update: {
+          action?: string | null
+          action_due_date?: string | null
+          action_owner?: string | null
+          completed_at?: string | null
           created_at?: string
           decision?: string
           id?: string
           next_step?: string | null
+          outcome?: string | null
+          outcome_notes?: string | null
           reason?: string | null
           recommendation_id?: string | null
           review_date?: string | null
