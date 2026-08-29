@@ -262,6 +262,9 @@ export function useDecisionRecords() {
         stakeholders: input.stakeholders,
         next_step: input.next_step ?? null,
         review_date: input.review_date ?? null,
+        action: input.action ?? null,
+        action_owner: input.action_owner ?? null,
+        action_due_date: input.action_due_date ?? null,
         status: sync.record,
         updated_at: new Date().toISOString(),
       };
