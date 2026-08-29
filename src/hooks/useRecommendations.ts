@@ -43,7 +43,36 @@ export interface DecisionRecord {
   review_date: string | null;
   status: string;
   updated_at: string;
+  /** Action layer — what happens next, who owns it and when it is due. */
+  action: string | null;
+  action_owner: string | null;
+  action_due_date: string | null;
+  outcome: string | null;
+  outcome_notes: string | null;
+  completed_at: string | null;
 }
+
+export const OUTCOMES = [
+  "Roadmap changed",
+  "Positioning changed",
+  "Customer research completed",
+  "Sales response created",
+  "No change required",
+  "Signal proved irrelevant",
+  "Continue monitoring",
+] as const;
+
+export type Outcome = (typeof OUTCOMES)[number];
+
+export const ACTION_SUGGESTIONS = [
+  "Review competitive battlecard",
+  "Validate roadmap gap",
+  "Interview customers",
+  "Prepare Sales response",
+  "Review technical capability",
+  "Monitor next release",
+];
+
 
 export interface DecisionHistoryEntry {
   id: string;
@@ -144,12 +173,17 @@ export interface DecisionInput {
   stakeholders: string[];
   next_step?: string | null;
   review_date?: string | null;
+  /** Action layer captured in the same workspace step. */
+  action?: string | null;
+  action_owner?: string | null;
+  action_due_date?: string | null;
   /** Required when an earlier decision is being replaced. */
   change_reason?: string | null;
 }
 
 const DECISION_COLUMNS =
-  "id, recommendation_id, signal_key, decision, reason, stakeholders, next_step, review_date, status, updated_at";
+  "id, recommendation_id, signal_key, decision, reason, stakeholders, next_step, review_date, status, updated_at, action, action_owner, action_due_date, outcome, outcome_notes, completed_at";
+
 
 /** Decision Records — the auditable "what did we decide" layer on top of recommendations. */
 export function useDecisionRecords() {
@@ -191,6 +225,12 @@ export function useDecisionRecords() {
       next_step: prev.next_step,
       review_date: prev.review_date,
       status: prev.status,
+      action: prev.action,
+      action_owner: prev.action_owner,
+      action_due_date: prev.action_due_date,
+      outcome: prev.outcome,
+      outcome_notes: prev.outcome_notes,
+      completed_at: prev.completed_at,
       change_reason: changeReason ?? null,
     });
     if (error) throw error;
@@ -222,6 +262,9 @@ export function useDecisionRecords() {
         stakeholders: input.stakeholders,
         next_step: input.next_step ?? null,
         review_date: input.review_date ?? null,
+        action: input.action ?? null,
+        action_owner: input.action_owner ?? null,
+        action_due_date: input.action_due_date ?? null,
         status: sync.record,
         updated_at: new Date().toISOString(),
       };
@@ -281,13 +324,53 @@ export function useDecisionRecords() {
     onSuccess: invalidate,
   });
 
+  /** Record the outcome of an action and close the loop. */
+  const completeAction = useMutation({
+    mutationFn: async ({
+      record,
+      outcome,
+      outcome_notes,
+    }: {
+      record: DecisionRecord;
+      outcome: string;
+      outcome_notes?: string | null;
+    }) => {
+      await archive(record, "Action completed");
+      const { error } = await supabase
+        .from("decision_records")
+        .update({
+          outcome,
+          outcome_notes: outcome_notes ?? null,
+          completed_at: new Date().toISOString(),
+          status: "resolved",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", record.id);
+      if (error) throw error;
+      if (record.recommendation_id) {
+        await supabase.from("recommendation_status").upsert(
+          {
+            user_id: user!.id,
+            recommendation_id: record.recommendation_id,
+            status: "done",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,recommendation_id" }
+        );
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     decisions: query.data ?? {},
     isLoading: query.isLoading,
     upsertDecision,
     extendReview,
     resolveDecision,
+    completeAction,
   };
+
 }
 
 /** Previous decisions for a signal, newest first. */

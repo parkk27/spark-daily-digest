@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { ChevronDown, Copy, ExternalLink, MessageSquare, Minus, Plus } from "lucide-react";
+import { ChevronDown, Copy, ExternalLink, MessageSquare, Minus, Plus, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useTrackEvent } from "@/hooks/useTrackEvent";
 import { cn } from "@/lib/utils";
+
 import {
   CATEGORY_LABELS,
   RECOMMENDATION_LABELS,
@@ -43,6 +46,30 @@ const DiffList = ({
 
 const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const track = useTrackEvent();
+
+  /** Promote a capability gap into an Action Radar signal via the secure edge function. */
+  const addToRadar = async () => {
+    setAdding(true);
+    const { data, error } = await supabase.functions.invoke("add-radar-signal", {
+      body: {
+        vendor: VENDOR_LABELS[row.vendor],
+        capability: row.capability,
+        gap: row.capability_gap,
+        impact: row.customer_impact,
+        confidence: row.confidence === "high" ? 85 : row.confidence === "medium" ? 65 : 45,
+      },
+    });
+    setAdding(false);
+    if (error || !data?.success) {
+      toast({ title: "Could not add to Action Radar", variant: "destructive" });
+      return;
+    }
+    track("compare_added_to_radar", row.id);
+    toast({ title: "Added to Action Radar", description: row.capability });
+  };
+
 
   const copyBriefing = async () => {
     const text = [
@@ -206,7 +233,17 @@ const ComparisonCard = ({ row }: { row: CapabilityBenchmark }) => {
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={copyBriefing}>
               <Copy className="h-4 w-4" /> Copy briefing
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={addToRadar}
+              disabled={adding}
+            >
+              <Radar className="h-4 w-4" /> Add to Action Radar
+            </Button>
             <ShareCardDialog
+
               data={{
                 title: row.capability,
                 why: row.capability_gap,

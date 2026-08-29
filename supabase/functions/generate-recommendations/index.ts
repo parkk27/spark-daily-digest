@@ -136,14 +136,40 @@ Deno.serve(async (req) => {
     const deduped = Array.from(
       new Map(rows.map((r) => [`${r.date}|${r.signal_key}`, r])).values(),
     );
+
+    // Real delta against the rows already stored for this date.
+    const { data: existing } = await supabase
+      .from("recommendations")
+      .select("signal_key, section, priority")
+      .eq("date", snap.date);
+    const before = new Map(
+      (existing ?? []).map((e: any) => [e.signal_key, e]),
+    );
+    let created = 0, changed = 0, unchanged = 0, escalated = 0;
+    for (const r of deduped) {
+      const prev = before.get(r.signal_key);
+      if (!prev) { created++; continue; }
+      if (prev.section !== r.section || prev.priority !== r.priority) {
+        changed++;
+        if (r.section === "act_now" && prev.section !== "act_now") escalated++;
+      } else unchanged++;
+    }
+
     const { error } = await supabase
       .from("recommendations")
       .upsert(deduped, { onConflict: "date,signal_key" });
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, count: deduped.length, date: snap.date }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        count: deduped.length,
+        date: snap.date,
+        delta: { created, changed, unchanged, escalated },
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+
   } catch (e) {
     console.error("generate-recommendations", e);
     return new Response(JSON.stringify({ success: false, error: String(e) }), {

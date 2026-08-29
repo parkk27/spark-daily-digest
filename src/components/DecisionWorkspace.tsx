@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { OUR_PLATFORM } from "@/lib/executive";
 import {
+  ACTION_SUGGESTIONS,
   DECISION_DESCRIPTIONS,
   DECISION_LABELS,
   useDecisionRecords,
@@ -43,7 +44,10 @@ interface Props {
   signalKey: string;
   signalTitle: string;
   existing?: DecisionRecord;
+  /** Step 1 — the review context shown before the PM decides. */
+  reviewContext?: React.ReactNode;
 }
+
 
 /** Structured PM response to a signal — turns a recommendation into an auditable Decision Record. */
 const DecisionWorkspace = ({
@@ -53,12 +57,15 @@ const DecisionWorkspace = ({
   signalKey,
   signalTitle,
   existing,
+  reviewContext,
 }: Props) => {
   const { upsertDecision } = useDecisionRecords();
   const [decision, setDecision] = useState<DecisionKind | null>(null);
   const [reason, setReason] = useState("");
   const [stakeholders, setStakeholders] = useState<string[]>([]);
   const [nextStep, setNextStep] = useState("");
+  const [actionOwner, setActionOwner] = useState("");
+  const [actionDue, setActionDue] = useState("");
   const [reviewDate, setReviewDate] = useState<Date | undefined>();
   const [changeReason, setChangeReason] = useState("");
 
@@ -67,10 +74,13 @@ const DecisionWorkspace = ({
     setDecision(existing?.decision ?? null);
     setReason(existing?.reason ?? "");
     setStakeholders(existing?.stakeholders ?? []);
-    setNextStep(existing?.next_step ?? "");
+    setNextStep(existing?.action ?? existing?.next_step ?? "");
+    setActionOwner(existing?.action_owner ?? "");
+    setActionDue(existing?.action_due_date ?? "");
     setReviewDate(existing?.review_date ? new Date(existing.review_date) : undefined);
     setChangeReason("");
   }, [open, existing]);
+
 
   const isChange = !!existing;
   const canSubmit =
@@ -91,6 +101,9 @@ const DecisionWorkspace = ({
         reason: reason.trim(),
         stakeholders,
         next_step: nextStep.trim() || null,
+        action: nextStep.trim() || null,
+        action_owner: actionOwner.trim() || null,
+        action_due_date: actionDue || null,
         review_date: reviewDate ? format(reviewDate, "yyyy-MM-dd") : null,
         change_reason: isChange ? changeReason.trim() : null,
       });
@@ -112,7 +125,20 @@ const DecisionWorkspace = ({
           <DialogDescription className="text-xs">{signalTitle}</DialogDescription>
         </DialogHeader>
 
+        {reviewContext && (
+          <div className="rounded-lg border border-border-subtle bg-surface-3/50 p-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-wide text-foreground">
+              Step 1 — Review
+            </p>
+            {reviewContext}
+          </div>
+        )}
+
+        <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-foreground">
+          Step 2 — Decide
+        </p>
         <div className="grid gap-2">
+
           {DECISIONS.map((d) => (
             <button
               key={d}
@@ -192,15 +218,47 @@ const DecisionWorkspace = ({
 
             <div className="space-y-1.5">
               <Label htmlFor="decision-next-step" className="text-xs">
-                Next step <span className="text-muted-foreground">(optional)</span>
+                Step 3 — Action: what should happen next?{" "}
+                <span className="text-muted-foreground">(optional)</span>
               </Label>
               <Input
                 id="decision-next-step"
                 value={nextStep}
                 onChange={(e) => setNextStep(e.target.value)}
                 placeholder="Interview 5 customers"
+                list="decision-action-suggestions"
+              />
+              <datalist id="decision-action-suggestions">
+                {ACTION_SUGGESTIONS.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="decision-action-owner" className="text-xs">
+                Action owner <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="decision-action-owner"
+                value={actionOwner}
+                onChange={(e) => setActionOwner(e.target.value)}
+                placeholder="Product"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="decision-action-due" className="text-xs">
+                Action due date <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="decision-action-due"
+                type="date"
+                value={actionDue}
+                onChange={(e) => setActionDue(e.target.value)}
+              />
+            </div>
+
 
             <div className="space-y-1.5">
               <span className="text-xs font-medium text-foreground">
