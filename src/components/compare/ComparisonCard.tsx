@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { ChevronDown, Copy, ExternalLink, MessageSquare, Minus, Plus } from "lucide-react";
+import { ChevronDown, Copy, ExternalLink, MessageSquare, Minus, Plus, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useTrackEvent } from "@/hooks/useTrackEvent";
 import { cn } from "@/lib/utils";
+
 import {
   CATEGORY_LABELS,
   RECOMMENDATION_LABELS,
