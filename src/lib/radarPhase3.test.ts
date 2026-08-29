@@ -110,9 +110,9 @@ describe("radar export", () => {
   });
 
   it("quotes CSV values containing commas and includes the count summary", () => {
-    const csv = buildCsv([toExportRow(rec(), {})], counts);
+    const csv = buildCsv([toExportRow(rec({ title: "Engine, v2 launch" }), {})], counts);
     expect(csv).toContain("Act now,2");
-    expect(csv).toContain('"Summary, with a comma"');
+    expect(csv).toContain('"Engine, v2 launch"');
     expect(csv.split("\n").filter(Boolean).length).toBe(1 + 5 + 1 + 1);
   });
 });
