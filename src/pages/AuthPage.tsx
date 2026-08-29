@@ -232,22 +232,46 @@ const AuthPage = () => {
               ) : (
                 <>
                   <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                    Sign in to Big Data Intelligence Hub
+                    Big Data Intelligence Hub
                   </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Executive intelligence for the modern data ecosystem.
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Enter your email and we'll send a secure sign-in link — no password needed.
+                    Turn technology, market and competitive signals into insights, decisions and
+                    actions.
                   </p>
 
-                  <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                  <Button
+                    className="mt-5 h-12 w-full gap-3 text-sm font-medium"
+                    onClick={() => void handleGoogle()}
+                    disabled={busy}
+                  >
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <GoogleIcon />
+                    )}
+                    Continue with Google
+                  </Button>
+
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">or continue with email</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email address</Label>
                       <Input
                         id="email"
                         ref={emailRef}
                         type="email"
+                        inputMode="email"
                         autoComplete="email"
-                        autoFocus
                         placeholder="you@company.com"
+                        className="h-11"
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
@@ -256,26 +280,28 @@ const AuthPage = () => {
                         required
                       />
                     </div>
-                    <Button type="submit" className="w-full" disabled={busy}>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      className="h-11 w-full"
+                      disabled={busy}
+                    >
                       {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-                      Continue
+                      Send magic link
                     </Button>
                   </form>
 
-                  <div className="my-5 flex items-center gap-3">
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => void handleGoogle()}
-                    disabled={busy}
-                  >
-                    Continue with Google
-                  </Button>
+                  <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
+                    By continuing, you agree to the{" "}
+                    <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+                      Terms
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </p>
                 </>
               )}
 
