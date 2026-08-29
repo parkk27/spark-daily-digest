@@ -324,13 +324,53 @@ export function useDecisionRecords() {
     onSuccess: invalidate,
   });
 
+  /** Record the outcome of an action and close the loop. */
+  const completeAction = useMutation({
+    mutationFn: async ({
+      record,
+      outcome,
+      outcome_notes,
+    }: {
+      record: DecisionRecord;
+      outcome: string;
+      outcome_notes?: string | null;
+    }) => {
+      await archive(record, "Action completed");
+      const { error } = await supabase
+        .from("decision_records")
+        .update({
+          outcome,
+          outcome_notes: outcome_notes ?? null,
+          completed_at: new Date().toISOString(),
+          status: "resolved",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", record.id);
+      if (error) throw error;
+      if (record.recommendation_id) {
+        await supabase.from("recommendation_status").upsert(
+          {
+            user_id: user!.id,
+            recommendation_id: record.recommendation_id,
+            status: "done",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,recommendation_id" }
+        );
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   return {
     decisions: query.data ?? {},
     isLoading: query.isLoading,
     upsertDecision,
     extendReview,
     resolveDecision,
+    completeAction,
   };
+
 }
 
 /** Previous decisions for a signal, newest first. */
