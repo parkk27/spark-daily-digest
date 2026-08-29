@@ -143,17 +143,27 @@ const AuthPage = () => {
     authLog("google_signin_started");
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
-      const { error: err } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: authCallbackUrl(next) },
+      // Lovable-managed Google credentials live in the OAuth broker, so the
+      // managed helper must be used — a direct provider call has no secret.
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: returnUrl,
       });
-      if (err) {
-        setError(friendlyAuthError(err));
-        authLogError("google_signin_failure", err, { reason: authErrorCode(err) });
+      if (result.error) {
+        setError(friendlyAuthError(result.error));
+        authLogError("google_signin_failure", result.error, {
+          reason: authErrorCode(result.error),
+        });
         return;
       }
-      // Browser navigates to Google; the session lands on /auth/callback.
-      authLog("google_signin_success", { status: "redirected" });
+      if (result.redirected) {
+        // Browser navigates to Google; the session lands on /auth/callback.
+        authLog("google_signin_success", { status: "redirected" });
+        return;
+      }
+      // Popup flow (editor preview): the session is already set.
+      authLog("google_signin_success", { status: "session" });
+      sessionStorage.removeItem(NEXT_KEY);
+      navigate(next || "/dashboard", { replace: true });
     } catch (err) {
       setError(friendlyAuthError(err));
       authLogError("google_signin_failure", err, { reason: authErrorCode(err) });
@@ -161,6 +171,7 @@ const AuthPage = () => {
       setBusy(false);
     }
   };
+
 
 
   return (
