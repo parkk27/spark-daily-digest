@@ -173,6 +173,10 @@ export interface DecisionInput {
   stakeholders: string[];
   next_step?: string | null;
   review_date?: string | null;
+  /** Action layer captured in the same workspace step. */
+  action?: string | null;
+  action_owner?: string | null;
+  action_due_date?: string | null;
   /** Required when an earlier decision is being replaced. */
   change_reason?: string | null;
 }
