@@ -46,7 +46,7 @@ export const API_URL: string =
   clean(env.VITE_API_URL) ?? (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1` : "");
 
 /** Where auth providers and magic links return the user. */
-export const AUTH_CALLBACK_URL = `${APP_URL}/signin`;
+export const AUTH_CALLBACK_URL = `${APP_URL}/auth/callback`;
 
 /**
  * Stable public address used for canonical tags, og:url and JSON-LD. Previews
