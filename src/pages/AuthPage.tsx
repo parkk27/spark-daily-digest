@@ -140,7 +140,7 @@ const AuthPage = () => {
     if (busy) return;
     setBusy(true);
     setError(null);
-    authLog("oauth_start", { provider: "google" });
+    authLog("google_signin_started");
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
       const { error: err } = await supabase.auth.signInWithOAuth({
@@ -149,17 +149,14 @@ const AuthPage = () => {
       });
       if (err) {
         setError(friendlyAuthError(err));
-        authLogError("oauth_callback", err, {
-          provider: "google",
-          reason: authErrorCode(err),
-        });
+        authLogError("google_signin_failure", err, { reason: authErrorCode(err) });
         return;
       }
-      // Browser navigates to Google; no further action needed.
-      authLog("oauth_callback", { provider: "google", status: "redirected" });
+      // Browser navigates to Google; the session lands on /auth/callback.
+      authLog("google_signin_success", { status: "redirected" });
     } catch (err) {
       setError(friendlyAuthError(err));
-      authLogError("oauth_callback", err, { provider: "google", reason: authErrorCode(err) });
+      authLogError("google_signin_failure", err, { reason: authErrorCode(err) });
     } finally {
       setBusy(false);
     }
