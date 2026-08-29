@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     hadSession.current = false;
+    authLog("sign_out");
     await supabase.auth.signOut();
     setExpired(false);
   };
