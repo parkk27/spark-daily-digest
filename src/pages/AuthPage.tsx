@@ -67,15 +67,25 @@ const AuthPage = () => {
     if (wasExpired) authLog("session_expired");
   }, [wasExpired]);
 
-  // Surface failed magic-link callbacks (expired or already-used links).
+  useEffect(() => {
+    authLog("auth_view");
+  }, []);
+
+  // Surface failed callbacks (expired links, cancelled consent, bad state).
   useEffect(() => {
     const cb = readCallbackError();
     if (!cb) return;
     authLogError("oauth_callback", cb, { code: cb.code });
-    const expiredLink = /expired|otp_expired|invalid|access_denied/i.test(
-      `${cb.code} ${cb.description}`,
+    const raw = `${cb.code} ${cb.description}`;
+    const cancelled = /access_denied|cancel|user denied/i.test(raw);
+    const expiredLink = /expired|otp_expired|invalid/i.test(raw);
+    setError(
+      cancelled
+        ? AUTH_MESSAGES.cancelled
+        : expiredLink
+          ? AUTH_MESSAGES.expiredLink
+          : AUTH_MESSAGES.callbackFailed,
     );
-    setError(expiredLink ? AUTH_MESSAGES.expiredLink : AUTH_MESSAGES.callbackFailed);
     clearCallbackError();
   }, []);
 
