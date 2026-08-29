@@ -10,6 +10,8 @@ export const AUTH_MESSAGES = {
   expired: "Your session has expired. Please sign in again.",
   expiredLink:
     "That sign-in link has expired or was already used. Request a fresh link below.",
+  cancelled: "Sign-in was cancelled. You can try again.",
+  network: "Unable to connect. Please check your connection and try again.",
 } as const;
 
 
@@ -23,6 +25,10 @@ export function friendlyAuthError(error: unknown): string {
   const m = raw.toLowerCase();
 
   if (!m) return AUTH_MESSAGES.generic;
+  if (m.includes("cancel") || m.includes("access_denied") || m.includes("user denied"))
+    return AUTH_MESSAGES.cancelled;
+  if (m.includes("network") || m.includes("failed to fetch") || m.includes("offline"))
+    return AUTH_MESSAGES.network;
   if (m.includes("provider") || m.includes("oauth secret") || m.includes("not enabled"))
     return AUTH_MESSAGES.googleUnavailable;
   if (m.includes("callback") || m.includes("redirect") || m.includes("state"))

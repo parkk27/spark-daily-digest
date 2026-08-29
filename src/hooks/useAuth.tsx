@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { authLog } from "@/lib/authLog";
 
 interface AuthState {
   user: User | null;
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     hadSession.current = false;
+    authLog("sign_out");
     await supabase.auth.signOut();
     setExpired(false);
   };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Check, Loader2, MailCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,6 +23,17 @@ const TRUST = [
 
 const RESEND_COOLDOWN = 30;
 const NEXT_KEY = "bdih:auth:next";
+
+/** Google "G" mark, per Google's branding requirements. */
+const GoogleIcon = () => (
+  <svg className="h-[18px] w-[18px]" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+    <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z" />
+    <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z" />
+    <path fill="#FBBC05" d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33Z" />
+    <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z" />
+  </svg>
+);
+
 
 
 const AuthPage = () => {
@@ -56,15 +67,25 @@ const AuthPage = () => {
     if (wasExpired) authLog("session_expired");
   }, [wasExpired]);
 
-  // Surface failed magic-link callbacks (expired or already-used links).
+  useEffect(() => {
+    authLog("auth_view");
+  }, []);
+
+  // Surface failed callbacks (expired links, cancelled consent, bad state).
   useEffect(() => {
     const cb = readCallbackError();
     if (!cb) return;
     authLogError("oauth_callback", cb, { code: cb.code });
-    const expiredLink = /expired|otp_expired|invalid|access_denied/i.test(
-      `${cb.code} ${cb.description}`,
+    const raw = `${cb.code} ${cb.description}`;
+    const cancelled = /access_denied|cancel|user denied/i.test(raw);
+    const expiredLink = /expired|otp_expired|invalid/i.test(raw);
+    setError(
+      cancelled
+        ? AUTH_MESSAGES.cancelled
+        : expiredLink
+          ? AUTH_MESSAGES.expiredLink
+          : AUTH_MESSAGES.callbackFailed,
     );
-    setError(expiredLink ? AUTH_MESSAGES.expiredLink : AUTH_MESSAGES.callbackFailed);
     clearCallbackError();
   }, []);
 
@@ -85,7 +106,7 @@ const AuthPage = () => {
     if (busy) return; // prevent duplicate requests
     setBusy(true);
     setError(null);
-    authLog("otp_request", { returnUrl });
+    authLog("magic_link_requested", { returnUrl });
     try {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: address,
@@ -93,12 +114,12 @@ const AuthPage = () => {
       });
       if (err) {
         setError(friendlyAuthError(err));
-        authLogError("otp_failure", err, { reason: authErrorCode(err) });
+        authLogError("magic_link_failure", err, { reason: authErrorCode(err) });
         return;
       }
       setSentTo(address);
       setCooldown(RESEND_COOLDOWN);
-      authLog("otp_success");
+      authLog("magic_link_success");
       toast.success("Sign-in link sent — check your inbox.");
     } finally {
       setBusy(false);
@@ -119,7 +140,7 @@ const AuthPage = () => {
     if (busy) return;
     setBusy(true);
     setError(null);
-    authLog("oauth_start", { provider: "google" });
+    authLog("google_signin_started");
     try {
       if (next) sessionStorage.setItem(NEXT_KEY, next);
       const { error: err } = await supabase.auth.signInWithOAuth({
@@ -128,17 +149,14 @@ const AuthPage = () => {
       });
       if (err) {
         setError(friendlyAuthError(err));
-        authLogError("oauth_callback", err, {
-          provider: "google",
-          reason: authErrorCode(err),
-        });
+        authLogError("google_signin_failure", err, { reason: authErrorCode(err) });
         return;
       }
-      // Browser navigates to Google; no further action needed.
-      authLog("oauth_callback", { provider: "google", status: "redirected" });
+      // Browser navigates to Google; the session lands on /auth/callback.
+      authLog("google_signin_success", { status: "redirected" });
     } catch (err) {
       setError(friendlyAuthError(err));
-      authLogError("oauth_callback", err, { provider: "google", reason: authErrorCode(err) });
+      authLogError("google_signin_failure", err, { reason: authErrorCode(err) });
     } finally {
       setBusy(false);
     }
@@ -214,22 +232,46 @@ const AuthPage = () => {
               ) : (
                 <>
                   <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                    Sign in to Big Data Intelligence Hub
+                    Big Data Intelligence Hub
                   </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Executive intelligence for the modern data ecosystem.
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Enter your email and we'll send a secure sign-in link — no password needed.
+                    Turn technology, market and competitive signals into insights, decisions and
+                    actions.
                   </p>
 
-                  <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                  <Button
+                    className="mt-5 h-12 w-full gap-3 text-sm font-medium"
+                    onClick={() => void handleGoogle()}
+                    disabled={busy}
+                  >
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <GoogleIcon />
+                    )}
+                    Continue with Google
+                  </Button>
+
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">or continue with email</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email address</Label>
                       <Input
                         id="email"
                         ref={emailRef}
                         type="email"
+                        inputMode="email"
                         autoComplete="email"
-                        autoFocus
                         placeholder="you@company.com"
+                        className="h-11"
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
@@ -238,26 +280,28 @@ const AuthPage = () => {
                         required
                       />
                     </div>
-                    <Button type="submit" className="w-full" disabled={busy}>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      className="h-11 w-full"
+                      disabled={busy}
+                    >
                       {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-                      Continue
+                      Send magic link
                     </Button>
                   </form>
 
-                  <div className="my-5 flex items-center gap-3">
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => void handleGoogle()}
-                    disabled={busy}
-                  >
-                    Continue with Google
-                  </Button>
+                  <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
+                    By continuing, you agree to the{" "}
+                    <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+                      Terms
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </p>
                 </>
               )}
 

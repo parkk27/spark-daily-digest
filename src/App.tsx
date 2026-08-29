@@ -17,6 +17,7 @@ import ContactPage from "@/pages/ContactPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import TermsPage from "@/pages/TermsPage";
 import OAuthConsent from "@/pages/OAuthConsent";
+import AuthCallback from "@/pages/AuthCallback";
 import NotFound from "@/pages/NotFound";
 
 // Protected modules are lazy-loaded so the public landing stays fast.
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/signin" element={<AuthPage />} />
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/auth" element={<Navigate to="/signin" replace />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
               {/* Public preview (sample data) */}

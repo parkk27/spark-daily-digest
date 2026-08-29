@@ -7,13 +7,21 @@
  */
 
 export type AuthEvent =
+  | "auth_view"
   | "otp_request"
   | "otp_success"
   | "otp_failure"
+  | "magic_link_requested"
+  | "magic_link_success"
+  | "magic_link_failure"
   | "oauth_start"
   | "oauth_callback"
+  | "google_signin_started"
+  | "google_signin_success"
+  | "google_signin_failure"
   | "session_restored"
-  | "session_expired";
+  | "session_expired"
+  | "sign_out";
 
 const isDev = import.meta.env.DEV;
 
