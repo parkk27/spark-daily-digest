@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { OUR_PLATFORM } from "@/lib/executive";
 import {
+  ACTION_SUGGESTIONS,
   DECISION_DESCRIPTIONS,
   DECISION_LABELS,
   useDecisionRecords,
@@ -43,7 +44,10 @@ interface Props {
   signalKey: string;
   signalTitle: string;
   existing?: DecisionRecord;
+  /** Step 1 — the review context shown before the PM decides. */
+  reviewContext?: React.ReactNode;
 }
+
 
 /** Structured PM response to a signal — turns a recommendation into an auditable Decision Record. */
 const DecisionWorkspace = ({
