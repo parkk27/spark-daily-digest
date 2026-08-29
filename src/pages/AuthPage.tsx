@@ -114,12 +114,12 @@ const AuthPage = () => {
       });
       if (err) {
         setError(friendlyAuthError(err));
-        authLogError("otp_failure", err, { reason: authErrorCode(err) });
+        authLogError("magic_link_failure", err, { reason: authErrorCode(err) });
         return;
       }
       setSentTo(address);
       setCooldown(RESEND_COOLDOWN);
-      authLog("otp_success");
+      authLog("magic_link_success");
       toast.success("Sign-in link sent — check your inbox.");
     } finally {
       setBusy(false);
