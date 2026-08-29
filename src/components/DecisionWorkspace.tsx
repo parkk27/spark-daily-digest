@@ -96,6 +96,9 @@ const DecisionWorkspace = ({
         reason: reason.trim(),
         stakeholders,
         next_step: nextStep.trim() || null,
+        action: nextStep.trim() || null,
+        action_owner: actionOwner.trim() || null,
+        action_due_date: actionDue || null,
         review_date: reviewDate ? format(reviewDate, "yyyy-MM-dd") : null,
         change_reason: isChange ? changeReason.trim() : null,
       });
