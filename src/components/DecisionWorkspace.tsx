@@ -59,6 +59,8 @@ const DecisionWorkspace = ({
   const [reason, setReason] = useState("");
   const [stakeholders, setStakeholders] = useState<string[]>([]);
   const [nextStep, setNextStep] = useState("");
+  const [actionOwner, setActionOwner] = useState("");
+  const [actionDue, setActionDue] = useState("");
   const [reviewDate, setReviewDate] = useState<Date | undefined>();
   const [changeReason, setChangeReason] = useState("");
 
@@ -67,10 +69,13 @@ const DecisionWorkspace = ({
     setDecision(existing?.decision ?? null);
     setReason(existing?.reason ?? "");
     setStakeholders(existing?.stakeholders ?? []);
-    setNextStep(existing?.next_step ?? "");
+    setNextStep(existing?.action ?? existing?.next_step ?? "");
+    setActionOwner(existing?.action_owner ?? "");
+    setActionDue(existing?.action_due_date ?? "");
     setReviewDate(existing?.review_date ? new Date(existing.review_date) : undefined);
     setChangeReason("");
   }, [open, existing]);
+
 
   const isChange = !!existing;
   const canSubmit =
