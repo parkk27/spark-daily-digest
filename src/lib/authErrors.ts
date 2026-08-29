@@ -10,6 +10,8 @@ export const AUTH_MESSAGES = {
   expired: "Your session has expired. Please sign in again.",
   expiredLink:
     "That sign-in link has expired or was already used. Request a fresh link below.",
+  cancelled: "Sign-in was cancelled. You can try again.",
+  network: "Unable to connect. Please check your connection and try again.",
 } as const;
 
 
