@@ -95,10 +95,14 @@ const HomePage = () => {
             Today's big data brief
           </h1>
           <p className="measure mt-2 text-sm text-muted-foreground">
-            Synthesized from today's ingested ecosystem coverage, written from the Microsoft Fabric
-            Spark point of view.
+            Synthesized from today's ingested ecosystem coverage, written from the{" "}
+            {perspective.display_name} point of view.
           </p>
+          <div className="mt-3">
+            <PerspectiveSelector />
+          </div>
         </div>
+
         <button
           onClick={() => refetch()}
           disabled={isFetching}
