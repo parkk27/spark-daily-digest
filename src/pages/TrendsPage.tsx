@@ -24,9 +24,13 @@ const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
   const { user } = useAuth();
   const watchlist = useWatchlist();
+  const { perspectiveId } = usePerspective();
+  const momentumQuery = usePerspectiveTrends(perspectiveId);
+  const momentum = useMemo(() => momentumIndex(momentumQuery.data), [momentumQuery.data]);
   const trends = data?.trends ?? [];
   const articles = data?.allArticles ?? [];
   const date = data?.dailySummary.date;
+
 
   const watched = useMemo(() => {
     const topics = user ? watchlist.data ?? [] : [];
