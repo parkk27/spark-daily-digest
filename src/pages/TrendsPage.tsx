@@ -15,6 +15,10 @@ import BiggestShift from "@/components/trends/BiggestShift";
 import TrendSection from "@/components/trends/TrendSection";
 import SeoHead from "@/components/SeoHead";
 import { siteUrl } from "@/config";
+import PerspectiveSelector from "@/components/PerspectiveSelector";
+import { usePerspective } from "@/hooks/usePerspective";
+import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
+
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
