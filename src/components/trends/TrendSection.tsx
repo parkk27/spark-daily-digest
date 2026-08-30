@@ -1,6 +1,8 @@
 import { Hash, ArrowRight, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import type { TrendItem } from "@/data/mockData";
 import ShareCardDialog from "@/components/share/ShareCardDialog";
+import MomentumChip from "@/components/trends/MomentumChip";
+import type { PerspectiveTrend } from "@/lib/momentum";
 
 const directionIcon = (t: TrendItem) => {
   if (t.status === "new") return <Sparkles className="h-3.5 w-3.5 text-status-new" />;
@@ -20,10 +22,12 @@ interface TrendRowProps {
   trend: TrendItem;
   why?: string;
   loading?: boolean;
+  momentum?: PerspectiveTrend;
 }
 
-const TrendRow = ({ trend, why, loading }: TrendRowProps) => (
+const TrendRow = ({ trend, why, loading, momentum }: TrendRowProps) => (
   <div className="flex flex-col gap-1.5 border-b border-border/50 py-3 last:border-0 last:pb-0 first:pt-0">
+
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <Hash className="h-3.5 w-3.5 text-muted-foreground" />
