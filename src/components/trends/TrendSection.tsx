@@ -75,6 +75,7 @@ interface TrendSectionProps {
   subtitle?: string;
   trends: TrendItem[];
   insights: Record<string, string>;
+  momentum?: Record<string, PerspectiveTrend>;
   loading?: boolean;
   empty?: string;
   delay?: number;
@@ -87,6 +88,7 @@ const TrendSection = ({
   subtitle,
   trends,
   insights,
+  momentum,
   loading,
   empty = "No signals in this category today.",
   delay = 0,
@@ -108,8 +110,19 @@ const TrendSection = ({
     ) : (
       <div className="flex flex-col">
         {trends.map((t) => (
-          <TrendRow key={t.topic} trend={t} why={insights[t.topic.toLowerCase()]} loading={loading} />
+          <TrendRow
+            key={t.topic}
+            trend={t}
+            why={insights[t.topic.toLowerCase()]}
+            loading={loading}
+            momentum={momentum?.[t.topic.toLowerCase()]}
+          />
         ))}
+      </div>
+    )}
+  </div>
+);
+
       </div>
     )}
   </div>
