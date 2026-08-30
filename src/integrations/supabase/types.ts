@@ -234,6 +234,69 @@ export type Database = {
           },
         ]
       }
+      perspective_trend_snapshots: {
+        Row: {
+          baseline_activity: number
+          competitive_intensity: number
+          created_at: string
+          current_activity: number
+          entity_id: string
+          entity_kind: string
+          entity_name: string
+          id: string
+          impact_score: number
+          momentum_direction: string
+          momentum_percent: number
+          perspective_id: string
+          rationale: string | null
+          strategic_relevance: number
+          top_drivers: Json
+          trend_confidence: number
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          baseline_activity?: number
+          competitive_intensity?: number
+          created_at?: string
+          current_activity?: number
+          entity_id: string
+          entity_kind?: string
+          entity_name: string
+          id?: string
+          impact_score?: number
+          momentum_direction?: string
+          momentum_percent?: number
+          perspective_id: string
+          rationale?: string | null
+          strategic_relevance?: number
+          top_drivers?: Json
+          trend_confidence?: number
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          baseline_activity?: number
+          competitive_intensity?: number
+          created_at?: string
+          current_activity?: number
+          entity_id?: string
+          entity_kind?: string
+          entity_name?: string
+          id?: string
+          impact_score?: number
+          momentum_direction?: string
+          momentum_percent?: number
+          perspective_id?: string
+          rationale?: string | null
+          strategic_relevance?: number
+          top_drivers?: Json
+          trend_confidence?: number
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -427,6 +490,7 @@ export type Database = {
           created_at: string
           email_frequency: string
           notifications_enabled: boolean
+          perspective_id: string | null
           preferred_technologies: string[]
           updated_at: string
           user_id: string
@@ -435,6 +499,7 @@ export type Database = {
           created_at?: string
           email_frequency?: string
           notifications_enabled?: boolean
+          perspective_id?: string | null
           preferred_technologies?: string[]
           updated_at?: string
           user_id: string
@@ -443,6 +508,7 @@ export type Database = {
           created_at?: string
           email_frequency?: string
           notifications_enabled?: boolean
+          perspective_id?: string | null
           preferred_technologies?: string[]
           updated_at?: string
           user_id?: string

@@ -15,14 +15,22 @@ import BiggestShift from "@/components/trends/BiggestShift";
 import TrendSection from "@/components/trends/TrendSection";
 import SeoHead from "@/components/SeoHead";
 import { siteUrl } from "@/config";
+import PerspectiveSelector from "@/components/PerspectiveSelector";
+import { usePerspective } from "@/hooks/usePerspective";
+import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
+
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
   const { user } = useAuth();
   const watchlist = useWatchlist();
+  const { perspectiveId } = usePerspective();
+  const momentumQuery = usePerspectiveTrends(perspectiveId);
+  const momentum = useMemo(() => momentumIndex(momentumQuery.data), [momentumQuery.data]);
   const trends = data?.trends ?? [];
   const articles = data?.allArticles ?? [];
   const date = data?.dailySummary.date;
+
 
   const watched = useMemo(() => {
     const topics = user ? watchlist.data ?? [] : [];
@@ -66,6 +74,9 @@ const TrendsPage = () => {
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
           Trends That Matter
         </h1>
+        <div className="mt-3">
+          <PerspectiveSelector />
+        </div>
       </div>
 
       {isLoading ? (
@@ -85,6 +96,7 @@ const TrendsPage = () => {
               subtitle="Topics you track, pinned to the top."
               trends={watched}
               insights={insightsMap}
+              momentum={momentum}
               loading={loadingWhy}
               delay={0}
               empty="No movement on your watched topics."
@@ -103,6 +115,7 @@ const TrendsPage = () => {
             subtitle="Topics gaining the most mention velocity vs yesterday."
             trends={growing}
             insights={insightsMap}
+            momentum={momentum}
             loading={loadingWhy}
             delay={100}
             empty="No accelerating topics today."
@@ -115,6 +128,7 @@ const TrendsPage = () => {
               subtitle="Where the platform vendors stand today."
               trends={vendors}
               insights={insightsMap}
+              momentum={momentum}
               loading={loadingWhy}
               delay={150}
               empty="No vendor-specific signals."
@@ -125,6 +139,7 @@ const TrendsPage = () => {
               subtitle="New topics worth watching early."
               trends={emerging}
               insights={insightsMap}
+              momentum={momentum}
               loading={loadingWhy}
               delay={200}
               empty="No new signals today."
@@ -137,6 +152,7 @@ const TrendsPage = () => {
             subtitle="Losing mindshare — reassess strategic weight."
             trends={declining}
             insights={insightsMap}
+            momentum={momentum}
             loading={loadingWhy}
             delay={250}
             empty="Nothing fading today."

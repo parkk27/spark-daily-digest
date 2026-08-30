@@ -10,6 +10,9 @@ import SurfaceCard from "@/components/ui/surface-card";
 import SkeletonCard from "@/components/ui/skeleton-card";
 import EmptyState from "@/components/ui/empty-state";
 import { siteUrl } from "@/config";
+import PerspectiveSelector from "@/components/PerspectiveSelector";
+import { usePerspective } from "@/hooks/usePerspective";
+
 
 const SectionCard = ({
   icon: Icon,
@@ -48,7 +51,9 @@ const SectionCard = ({
 );
 
 const HomePage = () => {
+  const { perspective } = usePerspective();
   const { data, isLoading, isFetching, refetch } = useSparkData();
+
   const trends = data?.trends ?? [];
   const topTrends = trends.filter((t) => t.status === "growing" || t.status === "new").slice(0, 4);
   const { summary, date } = data?.dailySummary ?? {
@@ -95,10 +100,14 @@ const HomePage = () => {
             Today's big data brief
           </h1>
           <p className="measure mt-2 text-sm text-muted-foreground">
-            Synthesized from today's ingested ecosystem coverage, written from the Microsoft Fabric
-            Spark point of view.
+            Synthesized from today's ingested ecosystem coverage, written from the{" "}
+            {perspective.display_name} point of view.
           </p>
+          <div className="mt-3">
+            <PerspectiveSelector />
+          </div>
         </div>
+
         <button
           onClick={() => refetch()}
           disabled={isFetching}
