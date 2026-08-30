@@ -124,6 +124,3 @@ const TrendSection = ({
 );
 
 export default TrendSection;
-
-
-export default TrendSection;
