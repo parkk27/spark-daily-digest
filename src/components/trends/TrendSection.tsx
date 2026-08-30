@@ -38,7 +38,8 @@ const TrendRow = ({ trend, why, loading, momentum }: TrendRowProps) => (
         <span>{trend.yesterday}</span>
         <ArrowRight className="h-3 w-3" />
         <span className="font-medium text-foreground">{trend.today}</span>
-        {directionLabel(trend)}
+        {momentum ? <MomentumChip trend={momentum} /> : directionLabel(trend)}
+
         <ShareCardDialog
           label=""
           data={{
