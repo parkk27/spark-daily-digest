@@ -10,6 +10,9 @@ import SurfaceCard from "@/components/ui/surface-card";
 import SkeletonCard from "@/components/ui/skeleton-card";
 import EmptyState from "@/components/ui/empty-state";
 import { siteUrl } from "@/config";
+import PerspectiveSelector from "@/components/PerspectiveSelector";
+import { usePerspective } from "@/hooks/usePerspective";
+
 
 const SectionCard = ({
   icon: Icon,
