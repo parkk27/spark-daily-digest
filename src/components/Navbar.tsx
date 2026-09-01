@@ -17,6 +17,7 @@ import {
   UserRound,
   Activity,
   PlayCircle,
+  Map,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProductTour } from "@/hooks/useProductTour";
@@ -36,6 +37,7 @@ const authedLinks = [
   { to: "/trends", label: "Trends", icon: TrendingUp, tour: "nav-trends" },
   { to: "/radar", label: "Radar", icon: Radar, tour: "nav-radar" },
   { to: "/compare", label: "Compare", icon: BarChart3, tour: "nav-compare" },
+  { to: "/roadmap", label: "Roadmap", icon: Map, tour: undefined as string | undefined },
   { to: "/copilot", label: "Copilot", icon: Sparkles, tour: "nav-copilot" },
 ];
 

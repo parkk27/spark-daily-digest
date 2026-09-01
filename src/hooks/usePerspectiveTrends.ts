@@ -17,9 +17,23 @@ export function usePerspectiveTrends(perspectiveId: string) {
         body: { perspective_id: perspectiveId },
       });
       if (error) return [];
-      return (data?.trends ?? []) as PerspectiveTrend[];
+      return dedupeLatest((data?.trends ?? []) as PerspectiveTrend[]);
     },
   });
+}
+
+/**
+ * The cache can hold several windows per entity. Keep only the most recent
+ * window per entity so the UI never shows the same entity twice.
+ */
+export function dedupeLatest(trends: PerspectiveTrend[]): PerspectiveTrend[] {
+  const best = new Map<string, PerspectiveTrend>();
+  for (const t of trends) {
+    const key = t.entity_id.toLowerCase();
+    const current = best.get(key);
+    if (!current || String(t.window_end) > String(current.window_end)) best.set(key, t);
+  }
+  return [...best.values()];
 }
 
 /** Momentum keyed by lowercase entity id for quick lookup from trend rows. */
