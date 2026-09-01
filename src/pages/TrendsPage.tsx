@@ -104,6 +104,78 @@ const TrendsPage = () => {
         <div className="mb-6 h-40 animate-pulse rounded-lg bg-surface-2" />
       ) : (
         <div className="mb-8 space-y-6">
+          <SurfaceCard className="p-6 opacity-0 animate-fade-in">
+            <div className="mb-1 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">
+                Momentum by entity ({MOMENTUM_CONFIG.window_days} days)
+              </h2>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Percent change versus the previous window. Select a bar to open its full explanation.
+              {suppressed > 0 && ` ${suppressed} entity${suppressed === 1 ? "" : " groups"} hidden as low data.`}
+            </p>
+            {bars.length === 0 ? (
+              <p className="py-6 text-sm text-muted-foreground">
+                No entity has enough observed activity to chart in this window.
+              </p>
+            ) : (
+              <MomentumBarChart bars={bars} onSelect={setSelectedId} />
+            )}
+          </SurfaceCard>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <SurfaceCard className="p-6 opacity-0 animate-fade-in" style={{ animationDelay: "60ms" }}>
+              <div className="mb-1 flex items-center gap-2">
+                <Swords className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">Competitive comparison</h2>
+              </div>
+              <p className="mb-4 text-xs text-muted-foreground">
+                {perspective.display_name} mean momentum against each tracked rival.
+              </p>
+              {rivalBars.length === 0 ? (
+                <p className="py-6 text-sm text-muted-foreground">
+                  No competitor activity observed in this window.
+                </p>
+              ) : (
+                <CompetitorChart bars={rivalBars} />
+              )}
+            </SurfaceCard>
+
+            <SurfaceCard className="p-6 opacity-0 animate-fade-in" style={{ animationDelay: "90ms" }}>
+              <div className="mb-1 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">Driver counts</h2>
+              </div>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Weighted change per theme or source between the two windows.
+              </p>
+              {dBars.length === 0 ? (
+                <p className="py-6 text-sm text-muted-foreground">
+                  No driver had a material weighted change this window.
+                </p>
+              ) : (
+                <DriverCountsChart drivers={dBars} />
+              )}
+            </SurfaceCard>
+          </div>
+
+          <SurfaceCard className="p-6 opacity-0 animate-fade-in" style={{ animationDelay: "110ms" }}>
+            <div className="mb-1 flex items-center gap-2">
+              <LineChartIcon className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">Momentum timeline</h2>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Momentum per stored snapshot window for the most-observed entities in this
+              perspective.
+            </p>
+            {historyQuery.isLoading ? (
+              <div className="h-40 animate-pulse rounded-md bg-surface-2" />
+            ) : (
+              <MomentumTimeline series={timeline} />
+            )}
+          </SurfaceCard>
+
           <div className="grid gap-6 md:grid-cols-2">
             <MomentumSection
               icon={TrendingUp}
@@ -138,8 +210,51 @@ const TrendsPage = () => {
           </SurfaceCard>
 
           <CompetitiveMomentum perspective={perspective} trends={pTrends} delay={160} />
+
+          <SurfaceCard className="p-6 opacity-0 animate-fade-in" style={{ animationDelay: "180ms" }}>
+            <div className="mb-1 flex items-center gap-2">
+              <MapIcon className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">Where this leads</h2>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Actions the evidence supports for {perspective.display_name}, ordered by priority.
+            </p>
+            <ul className="space-y-3">
+              {actions.map((a) => (
+                <li
+                  key={a.id}
+                  className="rounded-md border border-border/60 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium text-foreground">{a.title}</p>
+                    <span
+                      className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${priorityTone[a.priority]}`}
+                    >
+                      {a.priority}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{a.rationale}</p>
+                  <Link
+                    to={a.link.to}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    {a.link.label} <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </SurfaceCard>
         </div>
       )}
+
+      {selected && (
+        <MomentumExplainDrawer
+          trend={selected}
+          open={!!selected}
+          onOpenChange={(o) => !o && setSelectedId(null)}
+        />
+      )}
+
 
       <div className="mb-4 flex items-center gap-2">
         <Activity className="h-4 w-4 text-muted-foreground" />
