@@ -48,7 +48,7 @@ const MomentumBarChart = ({
         type="category"
         dataKey="name"
         width={110}
-        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))", textTransform: "capitalize" }}
+        tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
         axisLine={false}
         tickLine={false}
       />
