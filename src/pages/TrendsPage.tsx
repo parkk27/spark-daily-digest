@@ -95,7 +95,7 @@ const TrendsPage = () => {
           number.
         </p>
         <div className="mt-3">
-          <PerspectiveSelector />
+          <PerspectiveSelector surface="trends" />
         </div>
       </div>
 

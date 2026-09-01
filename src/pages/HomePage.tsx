@@ -155,7 +155,7 @@ const HomePage = () => {
             </p>
           )}
           <div className="mt-3">
-            <PerspectiveSelector />
+            <PerspectiveSelector surface="dashboard" />
           </div>
         </div>
 
