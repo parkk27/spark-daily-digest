@@ -1,5 +1,19 @@
-import { TrendingUp, Sparkles, TrendingDown, Building2, Star, Activity, Layers } from "lucide-react";
-import { useMemo } from "react";
+import {
+  TrendingUp,
+  Sparkles,
+  TrendingDown,
+  Building2,
+  Star,
+  Activity,
+  Layers,
+  BarChart3,
+  Swords,
+  LineChart as LineChartIcon,
+  Map as MapIcon,
+  ArrowRight,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useSparkData } from "@/hooks/useSparkData";
 import { useTrendInsights } from "@/hooks/useTrendInsights";
 import { useWatchlist } from "@/hooks/usePersonalization";
@@ -16,16 +30,34 @@ import TrendSection from "@/components/trends/TrendSection";
 import MomentumSection from "@/components/trends/MomentumSection";
 import CompetitiveMomentum from "@/components/trends/CompetitiveMomentum";
 import DriversList from "@/components/trends/DriversList";
+import MomentumBarChart from "@/components/trends/MomentumBarChart";
+import CompetitorChart from "@/components/trends/CompetitorChart";
+import DriverCountsChart from "@/components/trends/DriverCountsChart";
+import MomentumTimeline from "@/components/trends/MomentumTimeline";
+import MomentumExplainDrawer from "@/components/trends/MomentumExplainDrawer";
 import SurfaceCard from "@/components/ui/surface-card";
 import SeoHead from "@/components/SeoHead";
 import { siteUrl } from "@/config";
 import PerspectiveSelector from "@/components/PerspectiveSelector";
 import { usePerspective } from "@/hooks/usePerspective";
 import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
+import { usePerspectiveTrendHistory } from "@/hooks/usePerspectiveTrendHistory";
 import { MOMENTUM_CONFIG } from "@/lib/momentum";
 import { risingTrends, coolingTrends, topDrivers, ownTrends } from "@/lib/briefNarrative";
+import {
+  momentumBars,
+  competitorBars,
+  driverBars,
+  timelineSeries,
+  lowDataCount,
+} from "@/lib/trendCharts";
+import { roadmapActions, type ActionPriority } from "@/lib/roadmap";
 
-
+const priorityTone: Record<ActionPriority, string> = {
+  high: "border-status-declining/40 text-status-declining",
+  medium: "border-primary/40 text-primary",
+  low: "border-border text-muted-foreground",
+};
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
@@ -33,8 +65,26 @@ const TrendsPage = () => {
   const watchlist = useWatchlist();
   const { perspectiveId, perspective } = usePerspective();
   const momentumQuery = usePerspectiveTrends(perspectiveId);
+  const historyQuery = usePerspectiveTrendHistory(perspectiveId);
   const momentum = useMemo(() => momentumIndex(momentumQuery.data), [momentumQuery.data]);
   const pTrends = momentumQuery.data ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = useMemo(
+    () => pTrends.find((t) => t.entity_id === selectedId) ?? null,
+    [pTrends, selectedId],
+  );
+  const bars = useMemo(() => momentumBars(pTrends), [pTrends]);
+  const rivalBars = useMemo(
+    () => competitorBars(perspective.display_name, pTrends),
+    [perspective.display_name, pTrends],
+  );
+  const dBars = useMemo(() => driverBars(pTrends), [pTrends]);
+  const suppressed = useMemo(() => lowDataCount(pTrends), [pTrends]);
+  const timeline = useMemo(() => timelineSeries(historyQuery.data ?? []), [historyQuery.data]);
+  const actions = useMemo(
+    () => roadmapActions(perspective, pTrends).slice(0, 5),
+    [perspective, pTrends],
+  );
   const rising = useMemo(() => risingTrends(pTrends, 6), [pTrends]);
   const cooling = useMemo(() => coolingTrends(pTrends, 6), [pTrends]);
   const drivers = useMemo(() => topDrivers(pTrends, 6), [pTrends]);
@@ -42,6 +92,7 @@ const TrendsPage = () => {
     () => ownTrends(pTrends).filter((t) => t.momentum_direction !== "LOW_DATA").length,
     [pTrends],
   );
+
   const trends = data?.trends ?? [];
   const articles = data?.allArticles ?? [];
   const date = data?.dailySummary.date;
