@@ -12,7 +12,7 @@ import { ACTIVE_PERSPECTIVES } from "@/lib/perspectives";
 import { usePerspective } from "@/hooks/usePerspective";
 
 /** Lightweight perspective switcher — no page redesign, no forced selection. */
-const PerspectiveSelector = () => {
+const PerspectiveSelector = ({ surface = "unknown" }: { surface?: string }) => {
   const { perspectiveId, setPerspective } = usePerspective();
   const platforms = ACTIVE_PERSPECTIVES.filter((p) => p.type === "platform");
   const technologies = ACTIVE_PERSPECTIVES.filter((p) => p.type === "technology");
@@ -21,7 +21,8 @@ const PerspectiveSelector = () => {
     <div className="flex items-center gap-2">
       <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
       <span className="hidden text-xs text-muted-foreground sm:inline">Viewing through:</span>
-      <Select value={perspectiveId} onValueChange={(v) => void setPerspective(v)}>
+      <Select value={perspectiveId} onValueChange={(v) => void setPerspective(v, surface)}>
+
         <SelectTrigger className="h-8 w-[190px] text-xs" aria-label="Select intelligence perspective">
           <SelectValue />
         </SelectTrigger>
