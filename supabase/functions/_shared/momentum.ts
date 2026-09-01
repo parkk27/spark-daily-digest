@@ -109,6 +109,29 @@ export const DIRECTION_LABEL: Record<MomentumDirection, string> = {
   LOW_DATA: "Low data",
 };
 
+/**
+ * Display-only band table — mirrors momentumDirection() exactly so the UI can
+ * show the thresholds actually used to classify a trend.
+ */
+export const MOMENTUM_BANDS: { direction: MomentumDirection; rule: string }[] = [
+  { direction: "VERY_HIGH_UP", rule: "change >= +40%" },
+  { direction: "HIGH_UP", rule: "+20% to +40%" },
+  { direction: "UP", rule: "+5% to +20%" },
+  { direction: "STABLE", rule: "-5% to +5%" },
+  { direction: "DOWN", rule: "-20% to -5%" },
+  { direction: "HIGH_DOWN", rule: "-40% to -20%" },
+  { direction: "VERY_HIGH_DOWN", rule: "change <= -40%" },
+  { direction: "LOW_DATA", rule: `combined weighted activity < ${MOMENTUM_CONFIG.low_data_threshold}` },
+];
+
+/** Display-only breakdown of trendConfidence() — same caps as the implementation. */
+export const CONFIDENCE_FACTORS: { label: string; max: number; note: string }[] = [
+  { label: "Signal volume", max: 40, note: "4 points per observed signal" },
+  { label: "Evidence confidence", max: 25, note: "mean source confidence, 10 when unknown" },
+  { label: "Source diversity", max: 20, note: "5 points per distinct source" },
+  { label: "Consistency", max: 15, note: "15 when the second half of the window agrees with the overall move" },
+];
+
 function daysBetween(a: string, b: string) {
   return Math.floor((Date.parse(b) - Date.parse(a)) / 86_400_000);
 }
