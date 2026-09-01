@@ -240,7 +240,7 @@ const ActionRadarPage = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <PerspectiveSelector />
+            <PerspectiveSelector surface="radar" />
             <NotificationsBell
               recommendations={recommendations}
               decisions={decisions}

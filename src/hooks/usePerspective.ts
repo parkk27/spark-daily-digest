@@ -46,20 +46,32 @@ export function usePerspective() {
   }, [user]);
 
   const setPerspective = useCallback(
-    async (next: string) => {
+    async (next: string, surface = "unknown") => {
+      const previous = id;
       setId(next);
       try {
         localStorage.setItem(STORAGE_KEY, next);
       } catch { /* storage unavailable */ }
       qc.invalidateQueries({ queryKey: ["perspective-trends"] });
+      qc.invalidateQueries({ queryKey: ["perspective-trend-history"] });
       if (user) {
+        // Engagement telemetry: which perspectives users actually switch to.
+        if (previous !== next) {
+          void supabase.from("analytics_events").insert({
+            user_id: user.id,
+            event: "perspective_changed",
+            target: next,
+            metadata: { from: previous, to: next, surface },
+          } as never);
+        }
         await supabase
           .from("user_preferences")
           .upsert({ user_id: user.id, perspective_id: next }, { onConflict: "user_id" });
       }
     },
-    [user, qc],
+    [user, qc, id],
   );
+
 
   return { perspectiveId: id, perspective: getPerspective(id), setPerspective };
 }

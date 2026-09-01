@@ -105,7 +105,7 @@ const ComparisonPage = ({ preview = false }: { preview?: boolean }) => {
 
       <div className="sticky top-14 z-30 -mx-4 mb-6 space-y-2 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-3">
-          <PerspectiveSelector />
+          <PerspectiveSelector surface="compare" />
           <span className="text-xs text-muted-foreground">
             benchmarked against{" "}
             {vendorScope.map((v) => VENDOR_LABELS[v]).join(", ")}
