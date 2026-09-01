@@ -1,4 +1,4 @@
-import { TrendingUp, Sparkles, TrendingDown, Building2, Star } from "lucide-react";
+import { TrendingUp, Sparkles, TrendingDown, Building2, Star, Activity, Layers } from "lucide-react";
 import { useMemo } from "react";
 import { useSparkData } from "@/hooks/useSparkData";
 import { useTrendInsights } from "@/hooks/useTrendInsights";
@@ -13,20 +13,35 @@ import {
 } from "@/lib/trends";
 import BiggestShift from "@/components/trends/BiggestShift";
 import TrendSection from "@/components/trends/TrendSection";
+import MomentumSection from "@/components/trends/MomentumSection";
+import CompetitiveMomentum from "@/components/trends/CompetitiveMomentum";
+import DriversList from "@/components/trends/DriversList";
+import SurfaceCard from "@/components/ui/surface-card";
 import SeoHead from "@/components/SeoHead";
 import { siteUrl } from "@/config";
 import PerspectiveSelector from "@/components/PerspectiveSelector";
 import { usePerspective } from "@/hooks/usePerspective";
 import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
+import { MOMENTUM_CONFIG } from "@/lib/momentum";
+import { risingTrends, coolingTrends, topDrivers, ownTrends } from "@/lib/briefNarrative";
+
 
 
 const TrendsPage = () => {
   const { data, isLoading } = useSparkData();
   const { user } = useAuth();
   const watchlist = useWatchlist();
-  const { perspectiveId } = usePerspective();
+  const { perspectiveId, perspective } = usePerspective();
   const momentumQuery = usePerspectiveTrends(perspectiveId);
   const momentum = useMemo(() => momentumIndex(momentumQuery.data), [momentumQuery.data]);
+  const pTrends = momentumQuery.data ?? [];
+  const rising = useMemo(() => risingTrends(pTrends, 6), [pTrends]);
+  const cooling = useMemo(() => coolingTrends(pTrends, 6), [pTrends]);
+  const drivers = useMemo(() => topDrivers(pTrends, 6), [pTrends]);
+  const ownCount = useMemo(
+    () => ownTrends(pTrends).filter((t) => t.momentum_direction !== "LOW_DATA").length,
+    [pTrends],
+  );
   const trends = data?.trends ?? [];
   const articles = data?.allArticles ?? [];
   const date = data?.dailySummary.date;
@@ -74,10 +89,64 @@ const TrendsPage = () => {
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
           Trends That Matter
         </h1>
+        <p className="measure mt-2 text-sm text-muted-foreground">
+          Rolling {MOMENTUM_CONFIG.window_days}-day momentum through the{" "}
+          {perspective.display_name} lens, with the drivers and competitive position behind every
+          number.
+        </p>
         <div className="mt-3">
           <PerspectiveSelector />
         </div>
       </div>
+
+      {/* Perspective momentum layer (rolling 30-day, cached) */}
+      {momentumQuery.isLoading ? (
+        <div className="mb-6 h-40 animate-pulse rounded-lg bg-surface-2" />
+      ) : (
+        <div className="mb-8 space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <MomentumSection
+              icon={TrendingUp}
+              title="Rising momentum"
+              subtitle={`${ownCount} reportable entities in this perspective`}
+              trends={rising}
+              empty="Nothing is accelerating with enough evidence to report."
+            />
+            <MomentumSection
+              icon={TrendingDown}
+              title="Cooling momentum"
+              subtitle="Losing weighted activity versus the previous 30 days"
+              trends={cooling}
+              delay={80}
+              empty="Nothing is cooling with enough evidence to report."
+            />
+          </div>
+
+          <SurfaceCard
+            className="p-6 opacity-0 animate-fade-in"
+            style={{ animationDelay: "120ms" }}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">Drivers behind the move</h2>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Sources and themes with the largest weighted change between the current and baseline
+              windows.
+            </p>
+            <DriversList drivers={drivers} />
+          </SurfaceCard>
+
+          <CompetitiveMomentum perspective={perspective} trends={pTrends} delay={160} />
+        </div>
+      )}
+
+      <div className="mb-4 flex items-center gap-2">
+        <Activity className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">Today's daily signal layer</h2>
+      </div>
+
+
 
       {isLoading ? (
         <div className="space-y-6">

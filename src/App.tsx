@@ -25,6 +25,7 @@ const HomePage = lazy(() => import("@/pages/HomePage"));
 const NewsPage = lazy(() => import("@/pages/NewsPage"));
 const TrendsPage = lazy(() => import("@/pages/TrendsPage"));
 const ComparisonPage = lazy(() => import("@/pages/ComparisonPage"));
+const RoadmapPage = lazy(() => import("@/pages/RoadmapPage"));
 const CopilotPage = lazy(() => import("@/pages/CopilotPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const ActionRadarPage = lazy(() => import("@/pages/ActionRadarPage"));
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/news" element={protect(<NewsPage />)} />
               <Route path="/trends" element={protect(<TrendsPage />)} />
               <Route path="/compare" element={protect(<ComparisonPage />)} />
+              <Route path="/roadmap" element={protect(<RoadmapPage />)} />
               <Route path="/copilot" element={protect(<CopilotPage />)} />
               <Route path="/settings" element={protect(<SettingsPage />)} />
               <Route path="/radar" element={protect(<ActionRadarPage />)} />

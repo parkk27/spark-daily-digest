@@ -1,5 +1,15 @@
 import { useMemo } from "react";
-import { Lightbulb, TrendingUp, Sparkles, RefreshCw, Zap, Hash } from "lucide-react";
+import {
+  Lightbulb,
+  TrendingUp,
+  TrendingDown,
+  Sparkles,
+  RefreshCw,
+  Zap,
+  Hash,
+  Layers,
+  BookOpen,
+} from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useSparkData } from "@/hooks/useSparkData";
 import AskBigDataHub from "@/components/AskBigDataHub";
@@ -12,10 +22,15 @@ import EmptyState from "@/components/ui/empty-state";
 import { siteUrl } from "@/config";
 import PerspectiveSelector from "@/components/PerspectiveSelector";
 import MomentumChip from "@/components/trends/MomentumChip";
+import MomentumSection from "@/components/trends/MomentumSection";
+import CompetitiveMomentum from "@/components/trends/CompetitiveMomentum";
+import DriversList from "@/components/trends/DriversList";
 import { usePerspective } from "@/hooks/usePerspective";
 import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
 import { momentumCoverage, rankBriefItems, type Matched } from "@/lib/perspectiveMatch";
+import { briefNarrative, risingTrends, coolingTrends, topDrivers } from "@/lib/briefNarrative";
 import { MOMENTUM_CONFIG } from "@/lib/momentum";
+
 
 const SectionCard = ({
   icon: Icon,
@@ -91,6 +106,14 @@ const HomePage = () => {
     [summary.impact, perspective, momentum]
   );
 
+  const pTrends = perspectiveTrends ?? [];
+  const narrative = useMemo(() => briefNarrative(perspective, pTrends), [perspective, pTrends]);
+  const rising = useMemo(() => risingTrends(pTrends, 4), [pTrends]);
+  const cooling = useMemo(() => coolingTrends(pTrends, 4), [pTrends]);
+  const drivers = useMemo(() => topDrivers(pTrends, 5), [pTrends]);
+
+
+
   return (
     <div className="container max-w-4xl py-10">
       <SeoHead
@@ -157,6 +180,63 @@ const HomePage = () => {
       ) : (
         <div className="space-y-6">
           <ExecutiveSummaryCard intel={execIntel} />
+
+          {/* Narrative reading of the perspective's 30-day momentum */}
+          <SurfaceCard
+            raised
+            className="p-6 opacity-0 animate-fade-in"
+            style={{ animationDelay: "30ms" }}
+          >
+            <div className="mb-1 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">
+                What this means for {perspective.display_name}
+              </h2>
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Deterministic reading of the rolling {MOMENTUM_CONFIG.window_days}-day window
+              {coverage.windowStart ? ` (${coverage.windowStart} → ${coverage.windowEnd})` : ""}.
+            </p>
+            <div className="space-y-3">
+              {narrative.map((p, i) => (
+                <p key={i} className="text-[0.9375rem] leading-relaxed text-secondary-foreground">
+                  {p}
+                </p>
+              ))}
+            </div>
+          </SurfaceCard>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <MomentumSection
+              icon={TrendingUp}
+              title="Rising this window"
+              trends={rising}
+              delay={60}
+              empty="Nothing is accelerating with enough evidence yet."
+            />
+            <MomentumSection
+              icon={TrendingDown}
+              title="Cooling this window"
+              trends={cooling}
+              delay={80}
+              empty="Nothing is cooling with enough evidence yet."
+            />
+          </div>
+
+          <CompetitiveMomentum perspective={perspective} trends={pTrends} delay={100} />
+
+          <SurfaceCard
+            className="p-6 opacity-0 animate-fade-in"
+            style={{ animationDelay: "120ms" }}
+          >
+            <div className="mb-4 flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">Top drivers</h2>
+            </div>
+            <DriversList drivers={drivers} />
+          </SurfaceCard>
+
+
 
           {summary.topInsight && (
             <div
