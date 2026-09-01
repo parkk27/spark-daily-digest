@@ -13,6 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRecommendations, useDecisionRecords } from "@/hooks/useRecommendations";
 import { signalIdOf } from "@/lib/signalIdentity";
+import PerspectiveSelector from "@/components/PerspectiveSelector";
+import { usePerspective } from "@/hooks/usePerspective";
+import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
+import { bestTrend } from "@/lib/perspectiveMatch";
+import { perspectiveRelevance } from "@/lib/perspectiveScoring";
 import { useProfile, ROLE_FOCUS_LABELS } from "@/hooks/useProfile";
 import { useTrackEvent } from "@/hooks/useTrackEvent";
 import SurfaceCard from "@/components/ui/surface-card";
@@ -61,6 +66,11 @@ const ActionRadarPage = () => {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [exportOpen, setExportOpen] = useState(false);
   const [liveChange, setLiveChange] = useState(0);
+  const [perspectiveOnly, setPerspectiveOnly] = useState(false);
+  const [sortByFit, setSortByFit] = useState(false);
+  const { perspective } = usePerspective();
+  const { data: perspectiveTrends } = usePerspectiveTrends(perspective.id);
+  const momentum = useMemo(() => momentumIndex(perspectiveTrends), [perspectiveTrends]);
 
   const focus = profile?.role_focus ?? "product";
 
@@ -93,6 +103,23 @@ const ActionRadarPage = () => {
     [recommendations, decisions]
   );
 
+  /** Deterministic perspective fit + 30-day momentum for every signal. */
+  const matched = useMemo(() => {
+    const map: Record<string, { score: number; matched: string[]; trend?: ReturnType<typeof bestTrend> }> = {};
+    for (const x of laned) {
+      const signal = {
+        title: x.r.title,
+        summary: x.r.summary,
+        related_vendor: x.r.related_vendor,
+        related_technologies: x.r.related_technologies ?? [],
+        signal_type: x.r.signal_type,
+      };
+      const rel = perspectiveRelevance(signal, perspective);
+      map[x.r.id] = { score: rel.score, matched: rel.matched_terms, trend: bestTrend(signal, momentum) };
+    }
+    return map;
+  }, [laned, perspective, momentum]);
+
   const roleScoped = useMemo(
     () => laned.filter((x) => (mineOnly ? x.r.owner === focus : true)),
     [laned, mineOnly, focus]
@@ -111,13 +138,15 @@ const ActionRadarPage = () => {
     return { ...base, reviewsDue, total: roleScoped.length };
   }, [roleScoped]);
 
-  const visible = useMemo(
-    () =>
-      roleScoped
-        .filter((x) => (lane === "all" ? true : x.lane === lane))
-        .filter((x) => (reviewsDueOnly ? isReviewDue(x.decision) : true)),
-    [roleScoped, lane, reviewsDueOnly]
-  );
+  const visible = useMemo(() => {
+    const rows = roleScoped
+      .filter((x) => (lane === "all" ? true : x.lane === lane))
+      .filter((x) => (reviewsDueOnly ? isReviewDue(x.decision) : true))
+      .filter((x) => (perspectiveOnly ? (matched[x.r.id]?.score ?? 0) > 0 : true));
+    return sortByFit
+      ? [...rows].sort((a, b) => (matched[b.r.id]?.score ?? 0) - (matched[a.r.id]?.score ?? 0))
+      : rows;
+  }, [roleScoped, lane, reviewsDueOnly, perspectiveOnly, sortByFit, matched]);
 
   const themes = useMemo(() => emergingThemes(roleScoped.map((x) => x.r)), [roleScoped]);
 
@@ -211,6 +240,7 @@ const ActionRadarPage = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <PerspectiveSelector />
             <NotificationsBell
               recommendations={recommendations}
               decisions={decisions}
@@ -284,6 +314,27 @@ const ActionRadarPage = () => {
             }}
           >
             {mineOnly ? `Showing ${ROLE_FOCUS_LABELS[focus]}` : "Filter to my role"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={perspectiveOnly}
+            onClick={() => {
+              setPerspectiveOnly((v) => !v);
+              track("radar_filter_perspective", perspective.id);
+            }}
+          >
+            {perspectiveOnly
+              ? `Only ${perspective.display_name} signals`
+              : `Filter to ${perspective.display_name}`}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={sortByFit}
+            onClick={() => setSortByFit((v) => !v)}
+          >
+            {sortByFit ? "Sorted by perspective fit" : "Sort by perspective fit"}
           </Button>
           {(lane !== "all" || reviewsDueOnly) && (
             <Button
@@ -395,6 +446,10 @@ const ActionRadarPage = () => {
                         decision={x.decision}
                         lane={x.lane}
                         roleFocus={focus}
+                        perspectiveLabel={perspective.display_name}
+                        perspectiveFit={matched[x.r.id]?.score}
+                        perspectiveTerms={matched[x.r.id]?.matched}
+                        momentum={matched[x.r.id]?.trend}
                         onReview={() => openWorkspace(x)}
                         signalKey={signalIdOf(x.r)}
                         selectable={selectMode}

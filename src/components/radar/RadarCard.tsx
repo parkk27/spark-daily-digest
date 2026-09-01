@@ -8,6 +8,8 @@ import BookmarkButton from "@/components/BookmarkButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import SignalHistory from "@/components/radar/SignalHistory";
 import DecisionSummary from "@/components/DecisionSummary";
+import MomentumChip from "@/components/trends/MomentumChip";
+import type { PerspectiveTrend } from "@/lib/momentum";
 import { cn } from "@/lib/utils";
 import { DECISION_LABELS, type DecisionRecord, type Recommendation } from "@/hooks/useRecommendations";
 import {
@@ -54,6 +56,11 @@ interface Props {
   selected?: boolean;
   onSelectChange?: (selected: boolean) => void;
   signalKey: string;
+  /** Perspective-aware context — deterministic relevance and 30-day momentum. */
+  perspectiveLabel?: string;
+  perspectiveFit?: number;
+  perspectiveTerms?: string[];
+  momentum?: PerspectiveTrend;
 }
 
 /** Radar Card 2.0 — signal, competitive context, impact, evidence, workflow state, CTA. */
@@ -68,6 +75,10 @@ const RadarCard = ({
   selected = false,
   onSelectChange,
   signalKey,
+  perspectiveLabel,
+  perspectiveFit,
+  perspectiveTerms = [],
+  momentum,
 }: Props) => {
   const [open, setOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -138,6 +149,22 @@ const RadarCard = ({
           </p>
         </div>
       </div>
+
+      {typeof perspectiveFit === "number" && perspectiveLabel && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <MetaChip
+            label={`${perspectiveLabel} fit`}
+            value={`${perspectiveFit} / 100`}
+            tone={perspectiveFit > 0 ? "primary" : "neutral"}
+          />
+          <MomentumChip trend={momentum} />
+          <span className="text-[0.7rem] text-muted-foreground">
+            {perspectiveTerms.length > 0
+              ? `Matches: ${perspectiveTerms.slice(0, 4).join(", ")}`
+              : "No observed match with the selected perspective"}
+          </span>
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <MetaChip

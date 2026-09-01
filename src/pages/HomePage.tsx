@@ -11,8 +11,11 @@ import SkeletonCard from "@/components/ui/skeleton-card";
 import EmptyState from "@/components/ui/empty-state";
 import { siteUrl } from "@/config";
 import PerspectiveSelector from "@/components/PerspectiveSelector";
+import MomentumChip from "@/components/trends/MomentumChip";
 import { usePerspective } from "@/hooks/usePerspective";
-
+import { usePerspectiveTrends, momentumIndex } from "@/hooks/usePerspectiveTrends";
+import { momentumCoverage, rankBriefItems, type Matched } from "@/lib/perspectiveMatch";
+import { MOMENTUM_CONFIG } from "@/lib/momentum";
 
 const SectionCard = ({
   icon: Icon,
@@ -23,7 +26,7 @@ const SectionCard = ({
 }: {
   icon: React.ElementType;
   title: string;
-  items: string[];
+  items: Matched<string>[];
   delay: number;
   emptyLabel: string;
 }) => (
@@ -42,7 +45,8 @@ const SectionCard = ({
         {items.map((item, i) => (
           <li key={i} className="flex gap-3 text-sm leading-relaxed text-secondary-foreground">
             <span className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
-            <span>{item}</span>
+            <span className="flex-1">{item.row}</span>
+            <MomentumChip trend={item.trend} />
           </li>
         ))}
       </ul>
@@ -53,6 +57,9 @@ const SectionCard = ({
 const HomePage = () => {
   const { perspective } = usePerspective();
   const { data, isLoading, isFetching, refetch } = useSparkData();
+  const { data: perspectiveTrends } = usePerspectiveTrends(perspective.id);
+  const momentum = useMemo(() => momentumIndex(perspectiveTrends), [perspectiveTrends]);
+  const coverage = useMemo(() => momentumCoverage(perspectiveTrends), [perspectiveTrends]);
 
   const trends = data?.trends ?? [];
   const topTrends = trends.filter((t) => t.status === "growing" || t.status === "new").slice(0, 4);
@@ -68,6 +75,20 @@ const HomePage = () => {
         trends
       ),
     [date, summary, data, trends]
+  );
+
+  /** Brief wording is unchanged — momentum only re-ranks and annotates it. */
+  const highlights = useMemo(
+    () => rankBriefItems(summary.highlights, perspective, momentum),
+    [summary.highlights, perspective, momentum]
+  );
+  const emerging = useMemo(
+    () => rankBriefItems(summary.trends, perspective, momentum),
+    [summary.trends, perspective, momentum]
+  );
+  const impact = useMemo(
+    () => rankBriefItems(summary.impact, perspective, momentum),
+    [summary.impact, perspective, momentum]
   );
 
   return (
@@ -100,9 +121,16 @@ const HomePage = () => {
             Today's big data brief
           </h1>
           <p className="measure mt-2 text-sm text-muted-foreground">
-            Synthesized from today's ingested ecosystem coverage, written from the{" "}
-            {perspective.display_name} point of view.
+            Synthesized from today's ingested ecosystem coverage, ordered by the{" "}
+            {perspective.display_name} {MOMENTUM_CONFIG.window_days}-day momentum results.
           </p>
+          {coverage.total > 0 && (
+            <p className="measure mt-1 text-xs text-muted-foreground">
+              Window {coverage.windowStart} → {coverage.windowEnd} · {coverage.reportable} of{" "}
+              {coverage.total} tracked entities have enough evidence to report a trend
+              {coverage.lowData > 0 ? ` · ${coverage.lowData} low data` : ""}.
+            </p>
+          )}
           <div className="mt-3">
             <PerspectiveSelector />
           </div>
@@ -148,7 +176,7 @@ const HomePage = () => {
           <SectionCard
             icon={Lightbulb}
             title="Key highlights"
-            items={summary.highlights}
+            items={highlights}
             delay={100}
             emptyLabel="No highlights in the latest ingestion cycle yet."
           />
@@ -170,11 +198,15 @@ const HomePage = () => {
                   >
                     <Hash className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">{t.topic}</span>
-                    <span
-                      className={`text-xs font-semibold ${t.status === "new" ? "text-status-new" : "text-status-growing"}`}
-                    >
-                      {t.status === "new" ? "NEW" : `↑${t.change}`}
-                    </span>
+                    {momentum[t.topic.toLowerCase()] ? (
+                      <MomentumChip trend={momentum[t.topic.toLowerCase()]} />
+                    ) : (
+                      <span
+                        className={`text-xs font-semibold ${t.status === "new" ? "text-status-new" : "text-status-growing"}`}
+                      >
+                        {t.status === "new" ? "NEW" : `↑${t.change}`}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -184,14 +216,14 @@ const HomePage = () => {
           <SectionCard
             icon={TrendingUp}
             title="Emerging trends"
-            items={summary.trends}
+            items={emerging}
             delay={200}
             emptyLabel="No emerging trends detected in this window."
           />
           <SectionCard
             icon={Sparkles}
             title="Why it matters"
-            items={summary.impact}
+            items={impact}
             delay={300}
             emptyLabel="Impact analysis will appear after the next ingestion cycle."
           />
