@@ -192,13 +192,42 @@ export function getPerspective(id: string | null | undefined): Perspective {
 }
 
 /** Entities tracked for a perspective: its own topics plus its competitors. */
-export function perspectiveEntities(p: Perspective): { id: string; name: string; kind: string }[] {
+/** Vendor platforms tracked across every perspective, used for taxonomy only. */
+const PLATFORM_ENTITIES = [
+  "fabric", "onelake", "synapse", "databricks", "snowflake", "bigquery", "emr",
+  "dataproc", "redshift", "athena", "microsoft", "aws", "google",
+];
+
+/** Cross-cutting themes: not a product, not a technology. */
+const THEME_ENTITIES = [
+  "governance", "cost", "security", "compliance", "migration", "adoption",
+  "pricing", "performance", "reliability", "observability", "copilot", "ai",
+];
+
+/** Classify an entity into the reporting taxonomy: platform, technology or theme. */
+export function entityType(name: string, kind: string): "platform" | "technology" | "theme" | "competitor" {
+  if (kind === "competitor") return "competitor";
+  const n = name.toLowerCase();
+  if (PLATFORM_ENTITIES.some((p) => n.includes(p))) return "platform";
+  if (THEME_ENTITIES.some((t) => n.includes(t))) return "theme";
+  return "technology";
+}
+
+export function perspectiveEntities(
+  p: Perspective,
+): { id: string; name: string; kind: string; type: "platform" | "technology" | "theme" | "competitor" }[] {
   const own = [...p.core_topics, ...p.related_topics].map((t) => ({
     id: t.toLowerCase(),
     name: t,
     kind: "topic",
+    type: entityType(t, "topic"),
   }));
-  const rivals = p.competitors.map((c) => ({ id: c.toLowerCase(), name: c, kind: "competitor" }));
+  const rivals = p.competitors.map((c) => ({
+    id: c.toLowerCase(),
+    name: c,
+    kind: "competitor",
+    type: entityType(c, "competitor") as "competitor",
+  }));
   const seen = new Set<string>();
   return [...own, ...rivals].filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)));
 }
