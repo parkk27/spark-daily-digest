@@ -13,7 +13,7 @@ const trend = (over: Partial<PerspectiveTrend>): PerspectiveTrend =>
     current_activity: 10,
     baseline_activity: 5,
     momentum_percent: 100,
-    momentum_direction: "RISING",
+    momentum_direction: "UP",
     trend_confidence: 80,
     top_drivers: [],
     strategic_relevance: 70,
@@ -35,7 +35,7 @@ describe("trendCharts", () => {
 
   it("excludes low-data entities and counts them separately", () => {
     const rows = [
-      trend({ entity_id: "a", momentum_direction: "RISING" }),
+      trend({ entity_id: "a", momentum_direction: "UP" }),
       trend({ entity_id: "b", momentum_direction: "LOW_DATA" }),
     ];
     expect(momentumBars(rows)).toHaveLength(1);
