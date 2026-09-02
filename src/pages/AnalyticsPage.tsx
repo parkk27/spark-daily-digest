@@ -32,6 +32,18 @@ const AnalyticsPage = () => {
     return acc;
   }, {});
 
+  // Which perspectives users actually switch to, not just the default.
+  const perspectiveSwitches = data.filter((r) => r.event === "perspective_changed");
+  const perspectiveCounts = Object.entries(
+    perspectiveSwitches.reduce<Record<string, number>>((acc, r) => {
+      const key = r.target ?? "unknown";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]);
+  const switchTotal = perspectiveSwitches.length;
+
+
   if (adminLoading) return <div className="container py-12 text-sm text-muted-foreground">Loading…</div>;
 
   if (!isAdmin) {
