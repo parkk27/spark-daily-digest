@@ -20,7 +20,11 @@ export interface MomentumSignal {
 }
 
 export type MomentumDirection =
-  | "VERY_HIGH_UP" | "HIGH_UP" | "UP" | "STABLE" | "DOWN" | "HIGH_DOWN" | "VERY_HIGH_DOWN" | "LOW_DATA";
+  | "VERY_HIGH_UP" | "HIGH_UP" | "UP" | "STABLE" | "DOWN" | "HIGH_DOWN" | "VERY_HIGH_DOWN"
+  | "NEW_SIGNAL" | "LOW_DATA";
+
+/** Taxonomy separating vendor platforms, technologies and cross-cutting themes. */
+export type EntityType = "platform" | "technology" | "theme" | "competitor";
 
 export interface TrendDriver {
   label: string;
@@ -34,11 +38,13 @@ export interface PerspectiveTrend {
   entity_id: string;
   entity_name: string;
   entity_kind: string;
+  entity_type: EntityType;
   window_start: string;
   window_end: string;
   current_activity: number;
   baseline_activity: number;
-  momentum_percent: number;
+  /** null when the baseline window is too thin to divide by honestly. */
+  momentum_percent: number | null;
   momentum_direction: MomentumDirection;
   trend_confidence: number;
   top_drivers: TrendDriver[];
@@ -53,6 +59,10 @@ export const MOMENTUM_CONFIG = {
   window_days: 30,
   /** Minimum combined weighted activity before a direction other than LOW_DATA is reported. */
   low_data_threshold: 5,
+  /** Minimum baseline weighted activity required before a percentage is computed at all. */
+  min_baseline_activity: 3,
+  /** Current-window activity needed to call something a genuinely new signal. */
+  new_signal_min_activity: 3,
   max_signal_weight: 2,
   radar_eligibility: { impact: 70, relevance: 60, confidence: 60 },
 };
@@ -83,12 +93,24 @@ export function signalWeight(s: MomentumSignal): number {
   return Math.min(MOMENTUM_CONFIG.max_signal_weight, Math.round(w * 100) / 100);
 }
 
-export function momentumPercent(current: number, baseline: number): number {
-  return round1(((current - baseline) / Math.max(baseline, 1)) * 100);
+/**
+ * Percentage change between the two windows, or null when the baseline is too
+ * small to divide by. A near-zero baseline never becomes a huge percentage.
+ */
+export function momentumPercent(current: number, baseline: number): number | null {
+  if (baseline < MOMENTUM_CONFIG.min_baseline_activity) return null;
+  return round1(((current - baseline) / baseline) * 100);
 }
 
-export function momentumDirection(percent: number, combinedActivity: number): MomentumDirection {
+export function momentumDirection(
+  percent: number | null,
+  combinedActivity: number,
+  currentActivity = combinedActivity,
+): MomentumDirection {
   if (combinedActivity < MOMENTUM_CONFIG.low_data_threshold) return "LOW_DATA";
+  if (percent === null) {
+    return currentActivity >= MOMENTUM_CONFIG.new_signal_min_activity ? "NEW_SIGNAL" : "LOW_DATA";
+  }
   if (percent >= 40) return "VERY_HIGH_UP";
   if (percent >= 20) return "HIGH_UP";
   if (percent >= 5) return "UP";
@@ -106,6 +128,7 @@ export const DIRECTION_LABEL: Record<MomentumDirection, string> = {
   DOWN: "Edging down",
   HIGH_DOWN: "Falling",
   VERY_HIGH_DOWN: "Strongly falling",
+  NEW_SIGNAL: "New signal",
   LOW_DATA: "Low data",
 };
 
@@ -121,6 +144,7 @@ export const MOMENTUM_BANDS: { direction: MomentumDirection; rule: string }[] = 
   { direction: "DOWN", rule: "-20% to -5%" },
   { direction: "HIGH_DOWN", rule: "-40% to -20%" },
   { direction: "VERY_HIGH_DOWN", rule: "change <= -40%" },
+  { direction: "NEW_SIGNAL", rule: `no comparable baseline (previous window < ${MOMENTUM_CONFIG.min_baseline_activity} weighted signals)` },
   { direction: "LOW_DATA", rule: `combined weighted activity < ${MOMENTUM_CONFIG.low_data_threshold}` },
 ];
 
@@ -200,7 +224,7 @@ export function trendDrivers(current: MomentumSignal[], baseline: MomentumSignal
 export function momentumRationale(t: {
   entity_name: string;
   momentum_direction: MomentumDirection;
-  momentum_percent: number;
+  momentum_percent: number | null;
   current_activity: number;
   baseline_activity: number;
   top_drivers: TrendDriver[];
@@ -209,6 +233,13 @@ export function momentumRationale(t: {
     return `Not enough observed signal activity for ${t.entity_name} to report a reliable 30-day trend.`;
   }
   const drivers = t.top_drivers.map((d) => d.label).slice(0, 2).join(", ");
+  if (t.momentum_direction === "NEW_SIGNAL" || t.momentum_percent === null) {
+    return (
+      `New signal: ${t.entity_name} has ${t.current_activity} weighted signals in the current 30-day window ` +
+      `with no comparable previous window (${t.baseline_activity}), so no percentage change is reported` +
+      `${drivers ? `; observed signal activity comes from ${drivers}` : ""}.`
+    );
+  }
   const move = t.momentum_percent >= 0 ? "increase" : "decrease";
   return (
     `${DIRECTION_LABEL[t.momentum_direction]}: observed signal activity for ${t.entity_name} moved from ` +
@@ -226,7 +257,8 @@ export interface ComputeOptions {
 
 /**
  * Compute one PerspectiveTrend per tracked entity from a flat signal list.
- * Rolling windows: current = today-30..today, baseline = today-60..today-30.
+ * Rolling windows: current = today-29..today (30 days inclusive),
+ * baseline = today-59..today-30 (the 30 days immediately before). No overlap.
  */
 export function computePerspectiveTrends(
   perspective: Perspective,
@@ -235,8 +267,9 @@ export function computePerspectiveTrends(
 ): PerspectiveTrend[] {
   const { today } = opts;
   const window = MOMENTUM_CONFIG.window_days;
-  const windowStart = addDays(today, -window);
-  const baselineStart = addDays(today, -window * 2);
+  const windowStart = addDays(today, -(window - 1));
+  const baselineEnd = addDays(windowStart, -1);
+  const baselineStart = addDays(today, -(window * 2 - 1));
 
   // Deduplicate by canonical identity + date so re-ingested stories are counted once.
   const seen = new Set<string>();
@@ -249,7 +282,7 @@ export function computePerspectiveTrends(
 
   const inWindow = (s: MomentumSignal) => daysBetween(windowStart, s.date) >= 0 && daysBetween(s.date, today) >= 0;
   const inBaseline = (s: MomentumSignal) =>
-    daysBetween(baselineStart, s.date) >= 0 && daysBetween(s.date, windowStart) > 0;
+    daysBetween(baselineStart, s.date) >= 0 && daysBetween(s.date, baselineEnd) >= 0;
 
   const generated_at = new Date().toISOString();
 
@@ -261,7 +294,7 @@ export function computePerspectiveTrends(
     const currentWeight = round1(current.reduce((n, s) => n + signalWeight(s), 0));
     const baselineWeight = round1(baseline.reduce((n, s) => n + signalWeight(s), 0));
     const percent = momentumPercent(currentWeight, baselineWeight);
-    const direction = momentumDirection(percent, currentWeight + baselineWeight);
+    const direction = momentumDirection(percent, currentWeight + baselineWeight, currentWeight);
     const drivers = trendDrivers(current, baseline);
 
     const base = {
@@ -269,6 +302,7 @@ export function computePerspectiveTrends(
       entity_id: entity.id,
       entity_name: entity.name,
       entity_kind: entity.kind,
+      entity_type: entity.type,
       window_start: windowStart,
       window_end: today,
       current_activity: currentWeight,
@@ -292,8 +326,26 @@ export function isRadarEligible(t: Pick<PerspectiveTrend, "impact_score" | "stra
   const c = MOMENTUM_CONFIG.radar_eligibility;
   return (
     t.momentum_direction !== "LOW_DATA" &&
+    t.momentum_direction !== "NEW_SIGNAL" &&
     t.impact_score >= c.impact &&
     t.strategic_relevance >= c.relevance &&
     t.trend_confidence >= c.confidence
   );
 }
+
+/** Signed percentage label, honest about windows with no comparable baseline. */
+export function momentumLabel(t: Pick<PerspectiveTrend, "momentum_percent" | "momentum_direction">): string {
+  if (t.momentum_direction === "LOW_DATA") return "Low data";
+  if (t.momentum_percent === null) return "New signal";
+  if (t.momentum_direction === "STABLE") return "Stable";
+  const p = t.momentum_percent;
+  return `${p > 0 ? "+" : ""}${p}%`;
+}
+
+/** Momentum as a number for sorting only — never rendered as a measured value. */
+export const momentumSortValue = (t: { momentum_percent: number | null }): number =>
+  t.momentum_percent ?? 0;
+
+/** True when the row carries a measured percentage change. */
+export const hasMeasuredMomentum = (t: { momentum_percent: number | null; momentum_direction: MomentumDirection }) =>
+  t.momentum_percent !== null && t.momentum_direction !== "LOW_DATA";
